@@ -1,0 +1,129 @@
+---
+description: Global rules for all AI interactions in this project - Essential development principles, code quality standards, file safety rules, communication standards, và error handling basics. Apply to every interaction regardless of context.
+alwaysApply: true
+category: "core"
+priority: "critical"
+---
+
+## Core Principles
+
+### Language Requirements
+
+- **REQUIRED**: The project language is required to be English regardless of the language the user is chatting in
+- **REQUIRED**: All code, comments, and documentation must be in English
+- **REQUIRED**: Variable names, function names, and class names must be in English
+
+### User Intent Analysis (Enhanced)
+
+- **_BẮT BUỘC_** phân tích và suy luận ý định thực sự của người dùng trước khi thực hiện bất kỳ hành động nào
+- **_BẮT BUỘC_** hiểu ngữ cảnh và mục tiêu đằng sau yêu cầu thay vì chỉ làm theo nghĩa đen
+- **_BẮT BUỘC_** đề xuất giải pháp tối ưu và các lựa chọn thay thế dựa trên best practices
+- **_BẮT BUỘC_** xác nhận hiểu đúng ý định trước khi bắt đầu thực hiện
+- **_NGHIÊM CẤM_** thực hiện ngay lập tức mà không có giai đoạn phân tích
+
+## Task Management for Large Tasks
+
+- **_BẮT BUỘC_** kiểm tra git status trước khi bắt đầu task lớn (module mới, feature phức tạp)
+- **_BẮT BUỘC_** cảnh báo người dùng nếu project chưa được init git repository
+- **_BẮT BUỘC_** commit tất cả thay đổi hiện tại trước khi bắt đầu task lớn
+- **_BẮT BUỘC_** tạo nhánh git mới cho mỗi task lớn với tên mô tả rõ ràng
+- **_BẮT BUỘC_** thông báo cho người dùng về nhánh mới đã tạo và hướng dẫn revert nếu cần
+
+### Git Workflow for Large Tasks
+
+1. **Check Git Status**: `git status` to see current changes
+2. **Warn if not init**: Notify `git init` if not a git repository
+3. **Commit current changes**: `git add . && git commit -m "Save current progress before starting [task-name]"`
+4. **Create new branch**: `git checkout -b feature/[task-name]`
+5. **Notify user**: Guide revert with `git checkout main && git branch -D feature/[task-name]`
+6. **Execute task**: Regular commits with clear messages
+7. **Complete**: Merge to main and delete feature branch
+
+### Large Task Criteria
+
+A task is considered "large" when:
+
+- Creating new complete modules/components
+- Changing architecture or project structure
+- Implementing complex features with multiple files
+- Refactoring code affecting multiple components
+- Changes that may cause breaking changes
+
+## Instruction Design Principles
+
+- **_BẮT BUỘC_** instruction files chỉ chứa chỉ dẫn, hướng dẫn và yêu cầu
+- **_NGHIÊM CẤM_** bao gồm code implementation trong instruction files
+- **_BẮT BUỘC_** mô tả logic, flow và requirements bằng natural language
+- **_BẮT BUỘC_** sử dụng pseudocode hoặc flowchart khi cần minh họa logic
+- **_BẮT BUỘC_** tập trung vào "what to build" và "why" thay vì "how to implement"
+- **_BẮT BUỘC_** để AI tự quyết định implementation details dựa trên instruction
+
+## Code Quality Standards
+
+- Write clean, readable code
+- Use consistent naming conventions
+- Add appropriate comments for complex logic
+- Keep functions and classes focused and single-purpose
+- Follow SOLID principles
+- Implement proper error handling
+- Write self-documenting code with meaningful variable names
+
+## File Safety Rules
+
+- Always backup files before major changes
+- Use version control for all modifications
+- Document breaking changes
+- Maintain file organization
+- Create simple backups before major changes
+
+## Communication Standards
+
+- Provide clear, actionable feedback
+- Ask clarifying questions when needed
+- Document important decisions
+- Maintain professional tone
+- Explain problems simply and suggest multiple solutions
+
+## Error Handling
+
+- Handle errors gracefully
+- Provide meaningful error messages
+- Log important events
+- Have fallback plans
+- Stop after 3 failed attempts to fix errors
+- Analyze root cause before fixing errors
+
+## Project Identity
+
+- Always check .project-identity to know project structure and language
+- If .project-identity doesn't exist, create it and ask user to add more information
+- Use English as the default language for all technical content
+
+## Mock Data Management
+
+- If project uses any mock data, **_BẮT BUỘC_** create MockupData.md file
+- **_TUYỆT ĐỐI KHÔNG_** use demo/sample/mock names for mock data
+
+## Task Status Legend
+
+- ✅ Completed
+- ⏳ In Progress
+- ❌ Not Started
+
+## Documentation Requirements
+
+- Record important decisions in Decisions.md
+- Update Codebase.md when completing each section
+- Mark completed tasks in Instruction.md
+- End each task with a brief description of work done
+- Follow commit conventions (feat, fix, docs, style, refactor...)
+
+## Safety Measures
+
+- Don't optimize code without being asked
+- Don't delete unrelated code without being asked
+- Be careful when deleting files or editing files outside main task
+- Create simple backups before major changes
+
+## UI Animation & Lazy Loading Principles
+- Always apply subtle animations and tasteful lazy loading (skeletons/crossfade) to ensure smooth first render and data transitions.

@@ -1,0 +1,809 @@
+---
+description: iOS Development Rules - Rules for iOS development with Swift/SwiftUI. Kích hoạt khi working với iOS development, Swift projects, hoặc Apple ecosystem development.
+alwaysApply: false
+---
+
+# iOS Development Rules
+
+## Core Principles
+
+- **REQUIRED**: Use Swift as primary language
+- **REQUIRED**: Follow Human Interface Guidelines
+- **REQUIRED**: Use SwiftUI for modern UI development
+- **REQUIRED**: Implement proper lifecycle management
+- **REQUIRED**: Follow MVVM architecture pattern
+- **REQUIRED**: Use Combine for reactive programming
+
+## Project Structure
+
+### Standard iOS Project Structure
+
+```
+MyApp/
+├── MyApp/
+│   ├── App/
+│   │   ├── MyAppApp.swift
+│   │   └── ContentView.swift
+│   ├── Features/
+│   │   ├── User/
+│   │   │   ├── Views/
+│   │   │   ├── ViewModels/
+│   │   │   ├── Models/
+│   │   │   └── Services/
+│   │   └── Product/
+│   │       ├── Views/
+│   │       ├── ViewModels/
+│   │       ├── Models/
+│   │       └── Services/
+│   ├── Shared/
+│   │   ├── Components/
+│   │   ├── Extensions/
+│   │   ├── Utils/
+│   │   └── Resources/
+│   └── Data/
+│       ├── Network/
+│       ├── Storage/
+│       └── Repositories/
+├── MyAppTests/
+└── MyAppUITests/
+```
+
+## Architecture Patterns
+
+### MVVM with SwiftUI
+
+```swift
+// Model
+struct User: Identifiable, Codable {
+    let id: String
+    let name: String
+    let email: String
+    let createdAt: Date
+}
+
+// ViewModel
+@MainActor
+class UserViewModel: ObservableObject {
+    @Published var users: [User] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let userService: UserService
+    
+    init(userService: UserService = UserService()) {
+        self.userService = userService
+    }
+    
+    func loadUsers() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            users = try await userService.fetchUsers()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
+    
+    func deleteUser(_ user: User) async {
+        do {
+            try await userService.deleteUser(user)
+            users.removeAll { $0.id == user.id }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// View
+struct UserListView: View {
+    @StateObject private var viewModel = UserViewModel()
+    
+    var body: some View {
+        NavigationView {
+            Group {
+                if viewModel.isLoading {
+                    ProgressView("Loading users...")
+                } else if viewModel.users.isEmpty {
+                    ContentUnavailableView(
+                        "No Users",
+                        systemImage: "person.circle",
+                        description: Text("No users found")
+                    )
+                } else {
+                    List {
+                        ForEach(viewModel.users) { user in
+                            UserRowView(user: user)
+                                .swipeActions {
+                                    Button("Delete", role: .destructive) {
+                                        Task {
+                                            await viewModel.deleteUser(user)
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Users")
+            .refreshable {
+                await viewModel.loadUsers()
+            }
+            .task {
+                await viewModel.loadUsers()
+            }
+            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button("OK") {
+                    viewModel.errorMessage = nil
+                }
+            } message: {
+                Text(viewModel.errorMessage ?? "")
+            }
+        }
+    }
+}
+```
+
+## SwiftUI Components
+
+### Custom Components
+
+```swift
+struct UserCardView: View {
+    let user: User
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    AsyncImage(url: URL(string: user.avatarURL)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Circle()
+                            .fill(Color.gray.opacity(0.3))
+                    }
+                    .frame(width: 50, height: 50)
+                    .clipShape(Circle())
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(user.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text(user.email)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                }
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+#Preview {
+    UserCardView(
+        user: User(
+            id: "1",
+            name: "John Doe",
+            email: "john@example.com",
+            createdAt: Date()
+        )
+    ) {
+        print("User tapped")
+    }
+    .padding()
+}
+```
+
+### Form Components
+
+```swift
+struct UserFormView: View {
+    @State private var name = ""
+    @State private var email = ""
+    @State private var isPresented = false
+    
+    let onSave: (User) -> Void
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("User Information") {
+                    TextField("Name", text: $name)
+                        .textInputAutocapitalization(.words)
+                    
+                    TextField("Email", text: $email)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                }
+            }
+            .navigationTitle("Add User")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveUser()
+                    }
+                    .disabled(!isFormValid)
+                }
+            }
+        }
+    }
+    
+    private var isFormValid: Bool {
+        !name.isEmpty && !email.isEmpty && email.contains("@")
+    }
+    
+    private func saveUser() {
+        let user = User(
+            id: UUID().uuidString,
+            name: name,
+            email: email,
+            createdAt: Date()
+        )
+        onSave(user)
+        isPresented = false
+    }
+}
+```
+
+## Data Layer
+
+### Network Service
+
+```swift
+protocol UserServiceProtocol {
+    func fetchUsers() async throws -> [User]
+    func fetchUser(id: String) async throws -> User
+    func createUser(_ user: User) async throws -> User
+    func updateUser(_ user: User) async throws -> User
+    func deleteUser(_ user: User) async throws
+}
+
+class UserService: UserServiceProtocol {
+    private let session = URLSession.shared
+    private let baseURL = "https://api.example.com"
+    
+    func fetchUsers() async throws -> [User] {
+        let url = URL(string: "\(baseURL)/users")!
+        let (data, response) = try await session.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.invalidResponse
+        }
+        
+        return try JSONDecoder().decode([User].self, from: data)
+    }
+    
+    func fetchUser(id: String) async throws -> User {
+        let url = URL(string: "\(baseURL)/users/\(id)")!
+        let (data, response) = try await session.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.invalidResponse
+        }
+        
+        return try JSONDecoder().decode(User.self, from: data)
+    }
+    
+    func createUser(_ user: User) async throws -> User {
+        let url = URL(string: "\(baseURL)/users")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let userData = try JSONEncoder().encode(user)
+        request.httpBody = userData
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 201 else {
+            throw NetworkError.invalidResponse
+        }
+        
+        return try JSONDecoder().decode(User.self, from: data)
+    }
+    
+    func updateUser(_ user: User) async throws -> User {
+        let url = URL(string: "\(baseURL)/users/\(user.id)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let userData = try JSONEncoder().encode(user)
+        request.httpBody = userData
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.invalidResponse
+        }
+        
+        return try JSONDecoder().decode(User.self, from: data)
+    }
+    
+    func deleteUser(_ user: User) async throws {
+        let url = URL(string: "\(baseURL)/users/\(user.id)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        let (_, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 204 else {
+            throw NetworkError.invalidResponse
+        }
+    }
+}
+
+enum NetworkError: Error, LocalizedError {
+    case invalidResponse
+    case noData
+    case decodingError
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "Invalid response from server"
+        case .noData:
+            return "No data received"
+        case .decodingError:
+            return "Failed to decode data"
+        }
+    }
+}
+```
+
+### Core Data
+
+```swift
+import CoreData
+
+class CoreDataManager: ObservableObject {
+    static let shared = CoreDataManager()
+    
+    let container: NSPersistentContainer
+    
+    init() {
+        container = NSPersistentContainer(name: "UserModel")
+        container.loadPersistentStores { _, error in
+            if let error = error {
+                fatalError("Core Data error: \(error)")
+            }
+        }
+    }
+    
+    func save() {
+        let context = container.viewContext
+        
+        if context.hasChanges {
+            do {
+                try context.save()
+            } catch {
+                print("Save error: \(error)")
+            }
+        }
+    }
+}
+
+extension User {
+    func toEntity(context: NSManagedObjectContext) -> UserEntity {
+        let entity = UserEntity(context: context)
+        entity.id = id
+        entity.name = name
+        entity.email = email
+        entity.createdAt = createdAt
+        return entity
+    }
+    
+    static func fromEntity(_ entity: UserEntity) -> User {
+        User(
+            id: entity.id ?? "",
+            name: entity.name ?? "",
+            email: entity.email ?? "",
+            createdAt: entity.createdAt ?? Date()
+        )
+    }
+}
+```
+
+## Testing
+
+### Unit Tests
+
+```swift
+import XCTest
+@testable import MyApp
+
+class UserViewModelTests: XCTestCase {
+    var viewModel: UserViewModel!
+    var mockUserService: MockUserService!
+    
+    override func setUp() {
+        super.setUp()
+        mockUserService = MockUserService()
+        viewModel = UserViewModel(userService: mockUserService)
+    }
+    
+    override func tearDown() {
+        viewModel = nil
+        mockUserService = nil
+        super.tearDown()
+    }
+    
+    func testLoadUsersSuccess() async {
+        // Given
+        let expectedUsers = [
+            User(id: "1", name: "John", email: "john@example.com", createdAt: Date()),
+            User(id: "2", name: "Jane", email: "jane@example.com", createdAt: Date())
+        ]
+        mockUserService.users = expectedUsers
+        
+        // When
+        await viewModel.loadUsers()
+        
+        // Then
+        XCTAssertEqual(viewModel.users.count, 2)
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+    
+    func testLoadUsersFailure() async {
+        // Given
+        mockUserService.shouldThrowError = true
+        
+        // When
+        await viewModel.loadUsers()
+        
+        // Then
+        XCTAssertTrue(viewModel.users.isEmpty)
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+}
+
+class MockUserService: UserServiceProtocol {
+    var users: [User] = []
+    var shouldThrowError = false
+    
+    func fetchUsers() async throws -> [User] {
+        if shouldThrowError {
+            throw NetworkError.invalidResponse
+        }
+        return users
+    }
+    
+    func fetchUser(id: String) async throws -> User {
+        if shouldThrowError {
+            throw NetworkError.invalidResponse
+        }
+        return users.first { $0.id == id }!
+    }
+    
+    func createUser(_ user: User) async throws -> User {
+        if shouldThrowError {
+            throw NetworkError.invalidResponse
+        }
+        users.append(user)
+        return user
+    }
+    
+    func updateUser(_ user: User) async throws -> User {
+        if shouldThrowError {
+            throw NetworkError.invalidResponse
+        }
+        if let index = users.firstIndex(where: { $0.id == user.id }) {
+            users[index] = user
+        }
+        return user
+    }
+    
+    func deleteUser(_ user: User) async throws {
+        if shouldThrowError {
+            throw NetworkError.invalidResponse
+        }
+        users.removeAll { $0.id == user.id }
+    }
+}
+```
+
+### UI Tests
+
+```swift
+import XCTest
+
+class MyAppUITests: XCTestCase {
+    var app: XCUIApplication!
+    
+    override func setUp() {
+        super.setUp()
+        app = XCUIApplication()
+        app.launch()
+    }
+    
+    func testUserListDisplay() {
+        // Given
+        let userList = app.tables["UserList"]
+        
+        // When
+        userList.waitForExistence(timeout: 5)
+        
+        // Then
+        XCTAssertTrue(userList.exists)
+        XCTAssertTrue(userList.cells.count > 0)
+    }
+    
+    func testAddUser() {
+        // Given
+        let addButton = app.buttons["Add User"]
+        
+        // When
+        addButton.tap()
+        
+        // Then
+        let nameField = app.textFields["Name"]
+        let emailField = app.textFields["Email"]
+        let saveButton = app.buttons["Save"]
+        
+        XCTAssertTrue(nameField.exists)
+        XCTAssertTrue(emailField.exists)
+        XCTAssertTrue(saveButton.exists)
+        
+        // Fill form
+        nameField.tap()
+        nameField.typeText("Test User")
+        
+        emailField.tap()
+        emailField.typeText("test@example.com")
+        
+        saveButton.tap()
+        
+        // Verify user was added
+        let userList = app.tables["UserList"]
+        XCTAssertTrue(userList.cells.containing(.staticText, identifier: "Test User").exists)
+    }
+}
+```
+
+## Performance Optimization
+
+### Lazy Loading
+
+```swift
+struct LazyUserListView: View {
+    let users: [User]
+    
+    var body: some View {
+        LazyVStack(spacing: 8) {
+            ForEach(users) { user in
+                UserCardView(user: user) {
+                    // Handle tap
+                }
+            }
+        }
+    }
+}
+```
+
+### Image Caching
+
+```swift
+class ImageCache: ObservableObject {
+    static let shared = ImageCache()
+    private var cache = NSCache<NSString, UIImage>()
+    
+    private init() {
+        cache.countLimit = 100
+        cache.totalCostLimit = 50 * 1024 * 1024 // 50MB
+    }
+    
+    func image(for url: String) -> UIImage? {
+        return cache.object(forKey: url as NSString)
+    }
+    
+    func setImage(_ image: UIImage, for url: String) {
+        cache.setObject(image, forKey: url as NSString)
+    }
+}
+
+struct CachedAsyncImage: View {
+    let url: String
+    @StateObject private var imageCache = ImageCache.shared
+    @State private var image: UIImage?
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                ProgressView()
+                    .onAppear {
+                        loadImage()
+                    }
+            }
+        }
+    }
+    
+    private func loadImage() {
+        if let cachedImage = imageCache.image(for: url) {
+            image = cachedImage
+            return
+        }
+        
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: URL(string: url)!)
+                let loadedImage = UIImage(data: data)
+                
+                await MainActor.run {
+                    image = loadedImage
+                    if let loadedImage = loadedImage {
+                        imageCache.setImage(loadedImage, for: url)
+                    }
+                }
+            } catch {
+                print("Failed to load image: \(error)")
+            }
+        }
+    }
+}
+```
+
+## Accessibility
+
+### Accessibility Support
+
+```swift
+struct AccessibleUserCard: View {
+    let user: User
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack {
+                AsyncImage(url: URL(string: user.avatarURL)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Circle()
+                        .fill(Color.gray.opacity(0.3))
+                }
+                .frame(width: 50, height: 50)
+                .clipShape(Circle())
+                .accessibilityLabel("User avatar")
+                
+                VStack(alignment: .leading) {
+                    Text(user.name)
+                        .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
+                    
+                    Text(user.email)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+                    .accessibilityHidden(true)
+            }
+            .padding()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(user.name), \(user.email)")
+        .accessibilityHint("Tap to view user details")
+    }
+}
+```
+
+## Security
+
+### Keychain Storage
+
+```swift
+import Security
+
+class KeychainManager {
+    static let shared = KeychainManager()
+    
+    private init() {}
+    
+    func save(_ data: Data, for key: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecValueData as String: data
+        ]
+        
+        SecItemDelete(query as CFDictionary)
+        
+        let status = SecItemAdd(query as CFDictionary, nil)
+        return status == errSecSuccess
+    }
+    
+    func load(for key: String) -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        return status == errSecSuccess ? result as? Data : nil
+    }
+    
+    func delete(for key: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key
+        ]
+        
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess
+    }
+}
+```
+
+## Best Practices
+
+### Code Organization
+- Use MVVM architecture
+- Separate concerns into different layers
+- Use dependency injection
+- Follow single responsibility principle
+
+### Performance
+- Use LazyVStack for large lists
+- Implement proper image caching
+- Use @StateObject for ViewModels
+- Avoid memory leaks
+
+### Testing
+- Write unit tests for business logic
+- Test UI components with SwiftUI Testing
+- Use dependency injection for testability
+- Mock external dependencies
+
+### Accessibility
+- Add accessibility labels and hints
+- Support VoiceOver navigation
+- Use semantic colors
+- Test with accessibility inspector
+
+---
+
+_These rules ensure high-quality, maintainable, and accessible iOS applications._

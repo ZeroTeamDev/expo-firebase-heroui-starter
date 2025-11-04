@@ -1,0 +1,505 @@
+---
+description: Documentation Rules - Comprehensive documentation and planning standards for all projects. Kích hoạt khi working với documentation, project planning, hoặc knowledge management tasks.
+alwaysApply: false
+---
+
+# Documentation Rules
+
+## Core Principles
+
+- **_BẮT BUỘC_** tất cả documentation phải bằng tiếng Anh
+- **_BẮT BUỘC_** maintain documentation up-to-date với code changes
+- **_BẮT BUỘC_** sử dụng consistent format và structure
+- **_BẮT BUỘC_** include code examples và usage instructions
+- **_BẮT BUỘC_** document decisions và rationale
+
+## Documentation Structure
+
+### Project Documentation
+
+```
+docs/
+├── README.md                 # Project overview
+├── INSTALLATION.md          # Setup instructions
+├── API.md                   # API documentation
+├── ARCHITECTURE.md          # System architecture
+├── DEPLOYMENT.md            # Deployment guide
+├── CONTRIBUTING.md          # Contribution guidelines
+├── CHANGELOG.md             # Version history
+└── examples/                # Code examples
+    ├── basic-usage/
+    ├── advanced-usage/
+    └── integration/
+```
+
+### AI Development Documentation
+
+```
+docs/ai/
+├── requirements/            # Problem understanding
+├── design/                 # System architecture
+├── planning/               # Task breakdown
+├── implementation/         # Implementation guides
+├── testing/               # Testing strategy
+├── deployment/            # Deployment docs
+└── monitoring/            # Monitoring setup
+```
+
+## README.md Standards
+
+### Required Sections
+
+1. **Project Title and Description**
+2. **Features**
+3. **Installation**
+4. **Usage**
+5. **API Reference**
+6. **Contributing**
+7. **License**
+
+### Example Structure
+
+```markdown
+# Project Name
+
+Brief description of what the project does.
+
+## Features
+
+- Feature 1
+- Feature 2
+- Feature 3
+
+## Installation
+
+```bash
+npm install project-name
+```
+
+## Usage
+
+```javascript
+import { ProjectName } from 'project-name';
+
+const instance = new ProjectName();
+instance.doSomething();
+```
+
+## API Reference
+
+### Class: ProjectName
+
+#### constructor(options)
+- `options` (Object): Configuration options
+
+#### Methods
+
+##### doSomething()
+Performs some action.
+
+**Returns:** Promise<void>
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## License
+
+MIT
+```
+
+## Code Documentation
+
+### JSDoc Standards
+
+```javascript
+/**
+ * Calculates the sum of two numbers
+ * @param {number} a - First number
+ * @param {number} b - Second number
+ * @returns {number} The sum of a and b
+ * @throws {Error} When either parameter is not a number
+ * @example
+ * // Basic usage
+ * const result = add(2, 3);
+ * console.log(result); // 5
+ */
+function add(a, b) {
+  if (typeof a !== 'number' || typeof b !== 'number') {
+    throw new Error('Both parameters must be numbers');
+  }
+  return a + b;
+}
+```
+
+### TypeScript Documentation
+
+```typescript
+/**
+ * User service for managing user operations
+ */
+export class UserService {
+  /**
+   * Creates a new user
+   * @param userData - User data for creation
+   * @returns Promise resolving to created user
+   */
+  async createUser(userData: CreateUserRequest): Promise<User> {
+    // Implementation
+  }
+}
+
+/**
+ * User data interface
+ */
+export interface User {
+  /** Unique user identifier */
+  id: string;
+  /** User's email address */
+  email: string;
+  /** User's display name */
+  name: string;
+  /** User creation timestamp */
+  createdAt: Date;
+}
+```
+
+## API Documentation
+
+### OpenAPI/Swagger Standards
+
+```yaml
+openapi: 3.0.0
+info:
+  title: User API
+  version: 1.0.0
+  description: API for managing users
+
+paths:
+  /users:
+    get:
+      summary: Get all users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+```
+
+## Architecture Documentation
+
+### System Overview
+
+```markdown
+# System Architecture
+
+## Overview
+
+The system is built using a microservices architecture with the following components:
+
+- **API Gateway**: Routes requests to appropriate services
+- **User Service**: Manages user data and authentication
+- **Order Service**: Handles order processing
+- **Payment Service**: Processes payments
+- **Database**: PostgreSQL for data persistence
+
+## Data Flow
+
+```mermaid
+graph TD
+    A[Client] --> B[API Gateway]
+    B --> C[User Service]
+    B --> D[Order Service]
+    B --> E[Payment Service]
+    C --> F[Database]
+    D --> F
+    E --> F
+```
+
+## Technology Stack
+
+- **Backend**: Node.js, Express, TypeScript
+- **Database**: PostgreSQL
+- **Cache**: Redis
+- **Message Queue**: RabbitMQ
+- **Monitoring**: Prometheus, Grafana
+```
+
+## Decision Documentation
+
+### Decision Record Template
+
+```markdown
+# Decision Record: [Decision Title]
+
+## Status
+[Proposed | Accepted | Rejected | Superseded]
+
+## Context
+[What is the issue that we're seeing that is motivating this decision or change?]
+
+## Decision
+[What is the change that we're proposing or have agreed to implement?]
+
+## Consequences
+[What becomes easier or more difficult to do and any risks introduced by this change?]
+
+## Alternatives Considered
+[What other options did we consider and why did we reject them?]
+
+## Implementation Notes
+[Any notes about the implementation of this decision]
+```
+
+## Testing Documentation
+
+### Test Documentation Standards
+
+```markdown
+# Testing Strategy
+
+## Test Types
+
+### Unit Tests
+- Test individual functions and methods
+- Mock external dependencies
+- Aim for 90%+ code coverage
+
+### Integration Tests
+- Test component interactions
+- Use test database
+- Test API endpoints
+
+### End-to-End Tests
+- Test complete user workflows
+- Use real browser automation
+- Test critical user journeys
+
+## Test Structure
+
+```
+tests/
+├── unit/
+│   ├── services/
+│   ├── utils/
+│   └── components/
+├── integration/
+│   ├── api/
+│   └── database/
+└── e2e/
+    ├── user-flows/
+    └── critical-paths/
+```
+
+## Running Tests
+
+```bash
+# Unit tests
+npm run test:unit
+
+# Integration tests
+npm run test:integration
+
+# E2E tests
+npm run test:e2e
+
+# All tests
+npm run test
+```
+```
+
+## Deployment Documentation
+
+### Deployment Guide Template
+
+```markdown
+# Deployment Guide
+
+## Prerequisites
+
+- Node.js 18+
+- Docker and Docker Compose
+- AWS CLI configured
+- Database access
+
+## Environment Setup
+
+1. Copy environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Update environment variables:
+   ```bash
+   # Database
+   DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
+   
+   # API
+   API_PORT=3000
+   API_HOST=0.0.0.0
+   
+   # Security
+   JWT_SECRET=your-secret-key
+   ```
+
+## Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start database
+docker-compose up -d postgres
+
+# Run migrations
+npm run migrate
+
+# Start development server
+npm run dev
+```
+
+## Production Deployment
+
+### Using Docker
+
+```bash
+# Build image
+docker build -t myapp .
+
+# Run container
+docker run -d \
+  --name myapp \
+  -p 3000:3000 \
+  -e DATABASE_URL=$DATABASE_URL \
+  myapp
+```
+
+### Using AWS
+
+```bash
+# Deploy to ECS
+aws ecs create-service \
+  --cluster my-cluster \
+  --service-name myapp \
+  --task-definition myapp:1 \
+  --desired-count 1
+```
+```
+
+## Monitoring Documentation
+
+### Monitoring Setup
+
+```markdown
+# Monitoring and Observability
+
+## Metrics
+
+### Application Metrics
+- Request count and duration
+- Error rates
+- Database query performance
+- Memory and CPU usage
+
+### Business Metrics
+- User registrations
+- Order completion rates
+- Revenue metrics
+- Feature usage
+
+## Logging
+
+### Log Levels
+- **ERROR**: System errors and exceptions
+- **WARN**: Warning conditions
+- **INFO**: General information
+- **DEBUG**: Detailed debugging information
+
+### Log Format
+```json
+{
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "level": "INFO",
+  "message": "User created successfully",
+  "userId": "123",
+  "requestId": "req-456",
+  "service": "user-service"
+}
+```
+
+## Alerting
+
+### Critical Alerts
+- Service down
+- High error rate (>5%)
+- Database connection issues
+- Memory usage >90%
+
+### Warning Alerts
+- High response time (>2s)
+- Low disk space (<20%)
+- Unusual traffic patterns
+```
+
+## Documentation Maintenance
+
+### Update Process
+
+1. **Code Changes**: Update documentation when code changes
+2. **Regular Review**: Monthly documentation review
+3. **User Feedback**: Incorporate user feedback
+4. **Version Control**: Track documentation changes
+
+### Quality Checklist
+
+- [ ] All functions have JSDoc comments
+- [ ] API endpoints are documented
+- [ ] Installation instructions work
+- [ ] Examples are tested and working
+- [ ] Architecture diagrams are up-to-date
+- [ ] Decision records are maintained
+
+## Documentation Tools
+
+### Recommended Tools
+
+- **Markdown**: For general documentation
+- **JSDoc**: For JavaScript/TypeScript code
+- **OpenAPI**: For API documentation
+- **Mermaid**: For diagrams
+- **GitBook**: For comprehensive documentation sites
+
+### Automation
+
+- **API Documentation**: Auto-generate from OpenAPI specs
+- **Code Documentation**: Auto-generate from JSDoc comments
+- **Changelog**: Auto-generate from git commits
+- **Type Documentation**: Auto-generate from TypeScript types
+
+---
+
+_These rules ensure comprehensive, maintainable, and useful documentation for all projects._

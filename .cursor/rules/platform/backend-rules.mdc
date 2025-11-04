@@ -1,0 +1,415 @@
+---
+description: Backend Development Rules - Rules for backend development with Node.js, Python, and other backend frameworks. Kích hoạt khi working với backend development, API design, hoặc server-side programming.
+alwaysApply: false
+---
+
+# Backend Development Rules
+
+## General Principles
+
+- **REQUIRED**: Use TypeScript for type safety
+- **REQUIRED**: Implement proper error handling
+- **REQUIRED**: Use proper logging and monitoring
+- **REQUIRED**: Implement proper security measures
+- **REQUIRED**: Follow RESTful API design principles
+- **REQUIRED**: Use proper database design patterns
+
+## API Design
+
+### RESTful Principles
+
+- Use proper HTTP methods (GET, POST, PUT, DELETE, PATCH)
+- Use proper HTTP status codes
+- Implement proper resource naming
+- Use proper query parameters
+- Implement proper pagination
+- Use proper versioning
+
+```typescript
+// Good example
+// GET /api/v1/users?page=1&limit=10&sort=name
+// POST /api/v1/users
+// PUT /api/v1/users/:id
+// DELETE /api/v1/users/:id
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+}
+
+interface UserResponse {
+  data: User;
+  message: string;
+}
+
+interface UsersResponse {
+  data: User[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+```
+
+### GraphQL (Alternative)
+
+- Use proper schema design
+- Implement proper resolvers
+- Use proper data loaders
+- Implement proper caching
+- Use proper error handling
+
+## Database Design
+
+### Relational Databases
+
+- Use proper normalization
+- Implement proper indexing
+- Use proper foreign keys
+- Implement proper constraints
+- Use proper migrations
+- Implement proper backup strategies
+
+### NoSQL Databases
+
+- Use proper document design
+- Implement proper indexing
+- Use proper aggregation
+- Implement proper sharding
+- Use proper replication
+
+### Database Patterns
+
+- Use Repository pattern
+- Implement proper ORM/ODM
+- Use proper connection pooling
+- Implement proper transaction management
+- Use proper caching strategies
+
+## Security
+
+### Authentication
+
+- Use JWT tokens properly
+- Implement proper session management
+- Use proper password hashing (bcrypt)
+- Implement proper OAuth2
+- Use proper multi-factor authentication
+
+### Authorization
+
+- Implement proper RBAC (Role-Based Access Control)
+- Use proper permission systems
+- Implement proper resource-based authorization
+- Use proper API key management
+
+### Input Validation
+
+- Validate all inputs
+- Use proper sanitization
+- Implement proper rate limiting
+- Use proper CORS configuration
+- Implement proper CSRF protection
+
+```typescript
+// Good example
+import Joi from 'joi';
+
+const createUserSchema = Joi.object({
+  name: Joi.string().min(2).max(50).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required(),
+  age: Joi.number().integer().min(18).max(120).optional()
+});
+
+const validateCreateUser = (req: Request, res: Response, next: NextFunction) => {
+  const { error } = createUserSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      details: error.details.map(d => d.message)
+    });
+  }
+  next();
+};
+```
+
+## Error Handling
+
+### Error Types
+
+- Use proper error classes
+- Implement proper error codes
+- Use proper error messages
+- Implement proper error logging
+- Use proper error monitoring
+
+```typescript
+// Good example
+class AppError extends Error {
+  public statusCode: number;
+  public isOperational: boolean;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = true;
+
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+class ValidationError extends AppError {
+  constructor(message: string) {
+    super(message, 400);
+  }
+}
+
+class NotFoundError extends AppError {
+  constructor(resource: string) {
+    super(`${resource} not found`, 404);
+  }
+}
+
+// Error handler middleware
+const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
+  let error = { ...err };
+  error.message = err.message;
+
+  // Log error
+  console.error(err);
+
+  // Mongoose bad ObjectId
+  if (err.name === 'CastError') {
+    const message = 'Resource not found';
+    error = new NotFoundError(message);
+  }
+
+  // Mongoose duplicate key
+  if (err.name === 'MongoError' && (err as any).code === 11000) {
+    const message = 'Duplicate field value entered';
+    error = new ValidationError(message);
+  }
+
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const message = Object.values((err as any).errors).map((val: any) => val.message).join(', ');
+    error = new ValidationError(message);
+  }
+
+  res.status((error as AppError).statusCode || 500).json({
+    success: false,
+    error: error.message || 'Server Error'
+  });
+};
+```
+
+## Performance
+
+### Caching
+
+- Implement proper Redis caching
+- Use proper cache invalidation
+- Implement proper cache warming
+- Use proper cache strategies
+- Implement proper cache monitoring
+
+### Database Optimization
+
+- Use proper indexing
+- Implement proper query optimization
+- Use proper connection pooling
+- Implement proper read replicas
+- Use proper database monitoring
+
+### API Optimization
+
+- Implement proper pagination
+- Use proper compression
+- Implement proper rate limiting
+- Use proper CDN
+- Implement proper monitoring
+
+## Logging and Monitoring
+
+### Logging
+
+- Use structured logging
+- Implement proper log levels
+- Use proper log aggregation
+- Implement proper log rotation
+- Use proper log analysis
+
+```typescript
+// Good example
+import winston from 'winston';
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'user-service' },
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' }),
+  ],
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }));
+}
+```
+
+### Monitoring
+
+- Implement proper health checks
+- Use proper metrics collection
+- Implement proper alerting
+- Use proper APM tools
+- Implement proper distributed tracing
+
+## Testing
+
+### Unit Testing
+
+- Test business logic
+- Test utility functions
+- Test error handling
+- Test validation
+- Use proper mocking
+
+### Integration Testing
+
+- Test API endpoints
+- Test database operations
+- Test external services
+- Test authentication
+- Test authorization
+
+### Load Testing
+
+- Test performance under load
+- Test scalability
+- Test resource usage
+- Test error handling under load
+- Test recovery mechanisms
+
+## Deployment
+
+### Containerization
+
+- Use Docker properly
+- Implement proper multi-stage builds
+- Use proper base images
+- Implement proper security scanning
+- Use proper container orchestration
+
+### CI/CD
+
+- Implement proper automated testing
+- Use proper deployment pipelines
+- Implement proper rollback mechanisms
+- Use proper environment management
+- Implement proper monitoring
+
+### Environment Management
+
+- Use proper environment variables
+- Implement proper configuration management
+- Use proper secrets management
+- Implement proper environment validation
+- Use proper environment monitoring
+
+## Code Organization
+
+### Project Structure
+
+```
+src/
+├── controllers/
+├── services/
+├── models/
+├── middleware/
+├── routes/
+├── utils/
+├── types/
+├── config/
+└── tests/
+```
+
+### Design Patterns
+
+- Use Repository pattern
+- Implement proper dependency injection
+- Use proper factory patterns
+- Implement proper observer patterns
+- Use proper strategy patterns
+
+## Documentation
+
+### API Documentation
+
+- Use OpenAPI/Swagger
+- Document all endpoints
+- Document request/response schemas
+- Document error responses
+- Document authentication
+
+### Code Documentation
+
+- Use proper JSDoc comments
+- Document complex logic
+- Document business rules
+- Document configuration
+- Document deployment
+
+## Language-Specific Guidelines
+
+### Node.js/TypeScript
+
+- Use proper async/await
+- Implement proper error handling
+- Use proper TypeScript types
+- Implement proper dependency injection
+- Use proper testing frameworks
+
+### Python
+
+- Follow PEP 8 style guide
+- Use proper type hints
+- Implement proper exception handling
+- Use proper virtual environments
+- Use proper testing frameworks
+
+### Java
+
+- Follow Java naming conventions
+- Use proper package structure
+- Implement proper exception handling
+- Use proper design patterns
+- Use proper testing frameworks
+
+---
+
+_These rules ensure robust, secure, and maintainable backend applications._

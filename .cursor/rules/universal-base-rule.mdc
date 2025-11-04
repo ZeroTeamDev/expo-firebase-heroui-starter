@@ -1,0 +1,213 @@
+---
+description: Universal Base Rule - Universal base rule for all projects - the only rule that should auto-attach. Essential functionality và delegation to project-specific rule systems.
+alwaysApply: true
+---
+
+# Universal Base Rule
+
+This is the **ONLY** rule that should be auto-attached across all projects. It provides the minimal essential functionality and delegates to project-specific rule systems.
+
+
+
+## Primary Rule
+- Default locale: English (en.lproj/Localizable.strings)
+- Trong mô tả của file hãy sử dụng: Created by Kien AI (leejungkiin@gmail.com)
+
+## Core Principles
+
+### 1. Minimal Footprint
+
+- **Single rule auto-attach** - Only this rule loads automatically
+- **Universal applicability** - Works for any project type
+- **Token efficient** - Minimal content, maximum delegation
+
+### 2. Smart Delegation
+
+- Detect project type and load appropriate rules
+- Context-aware rule loading based on current work
+- Agent-based rule distribution for specialized tasks
+
+### 3. Essential Functions
+
+- File safety and backup
+- Basic code quality standards
+- Communication guidelines
+- Error handling basics
+
+## Project Detection & Rule Loading
+
+### Auto-Detection Logic
+
+```javascript
+function detectProjectAndLoadRules() {
+  const projectType = detectProjectType();
+  const context = detectCurrentContext();
+
+  switch (projectType) {
+    case "ios":
+      loadIOSRules(context);
+      break;
+    case "android":
+      loadAndroidRules(context);
+      break;
+    case "web":
+      loadWebRules(context);
+      break;
+    case "nodejs":
+      loadNodeJSRules(context);
+      break;
+    case "python":
+      loadPythonRules(context);
+      break;
+    default:
+      loadGenericRules(context);
+  }
+}
+
+function detectProjectType() {
+  if (hasFile("*.xcodeproj") || hasFile("*.swift")) return "ios";
+  if (hasFile("build.gradle") || hasFile("*.kt")) return "android";
+  if (hasFile("package.json") && hasFile("src/")) return "web";
+  if (hasFile("package.json") && hasFile("server/")) return "nodejs";
+  if (hasFile("requirements.txt") || hasFile("*.py")) return "python";
+  return "generic";
+}
+```
+
+### Context-Aware Loading
+
+```javascript
+function detectCurrentContext() {
+  const fileType = getCurrentFileType();
+  const userIntent = detectUserIntent();
+  const workingArea = getWorkingArea();
+
+  return {
+    fileType: fileType,
+    intent: userIntent,
+    area: workingArea,
+    needsPlanning: userIntent.includes("plan") || userIntent.includes("brainstorm"),
+    needsDevelopment: userIntent.includes("code") || userIntent.includes("implement"),
+    needsReview: userIntent.includes("review") || userIntent.includes("check"),
+    needsTesting: fileType === "test" || userIntent.includes("test"),
+  };
+}
+```
+
+## Essential Functions (Always Available)
+
+### 1. File Safety
+
+- Always backup before major changes
+- Use version control for all modifications
+- Document breaking changes
+- Maintain file organization
+
+### 2. Code Quality Basics
+
+- Write clean, readable code
+- Use consistent naming conventions
+- Add comments for complex logic
+- Keep functions focused
+
+### 3. Communication Standards
+
+- Provide clear, actionable feedback
+- Ask clarifying questions when needed
+- Document important decisions
+- Maintain professional tone
+
+### 4. Error Handling
+
+- Handle errors gracefully
+- Provide meaningful error messages
+- Log important events
+- Have fallback plans
+
+## Rule Distribution System
+
+### Project-Specific Rules
+
+When project type is detected, load appropriate rules:
+
+**iOS Projects:**
+- iOS workflow rules
+- SwiftUI guidelines
+- XCTest rules (when testing)
+
+**Android Projects:**
+- Android workflow rules
+- Kotlin guidelines
+- Android testing rules
+- Material Design rules
+
+**Web Projects:**
+- Frontend/backend rules
+- Framework-specific rules (React, Vue, etc.)
+- API integration rules
+- Testing framework rules
+
+**Node.js Projects:**
+- Backend development rules
+- API design rules
+- Database rules
+- Deployment rules
+
+**Python Projects:**
+- Python development rules
+- Framework-specific rules (Django, Flask, etc.)
+- Data science rules (when applicable)
+
+### Agent-Based Rules
+
+Load specialized rules based on user intent:
+
+**Planning Agent:**
+- Brainstorm workflows
+- Requirements gathering
+- Project setup rules
+
+**Development Agent:**
+- Code implementation rules
+- Architecture patterns
+- Best practices
+
+**Review Agent:**
+- Code review processes
+- Quality assurance
+- Testing strategies
+
+**Optimization Agent:**
+- Performance optimization
+- Code refactoring
+- Security improvements
+
+## Benefits
+
+### Token Efficiency
+
+- **Before**: 20+ rules auto-attached
+- **After**: 1 rule auto-attached
+- **Reduction**: 95%+ token savings
+
+### Performance
+
+- Faster initial load
+- Contextual rule loading
+- Reduced memory usage
+
+### Maintainability
+
+- Single point of control
+- Easy to update and extend
+- Clear delegation structure
+
+### Flexibility
+
+- Works with any project type
+- Adapts to user needs
+- Scales with complexity
+
+---
+
+_This universal rule provides maximum efficiency while maintaining full functionality through intelligent delegation._

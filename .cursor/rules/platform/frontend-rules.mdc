@@ -1,0 +1,334 @@
+---
+description: Frontend Development Rules - Rules for frontend development with React, Vue, Angular, and other frameworks. Kích hoạt khi working với frontend development, React components, hoặc web UI frameworks.
+alwaysApply: false
+---
+
+# Frontend Development Rules
+
+## General Principles
+
+- **REQUIRED**: Use TypeScript for type safety
+- **REQUIRED**: Follow responsive design principles
+- **REQUIRED**: Implement proper accessibility (WCAG 2.1)
+- **REQUIRED**: Use semantic HTML elements
+- **REQUIRED**: Follow mobile-first approach
+- **REQUIRED**: Implement proper SEO practices
+
+## Component Design
+
+### React Components
+
+- Use functional components with hooks
+- Implement proper prop types or TypeScript interfaces
+- Use custom hooks for reusable logic
+- Implement proper error boundaries
+- Use React.memo for performance optimization
+- Follow single responsibility principle
+
+```typescript
+// Good example
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary';
+  disabled?: boolean;
+}
+
+const Button: React.FC<ButtonProps> = ({ 
+  children, 
+  onClick, 
+  variant = 'primary', 
+  disabled = false 
+}) => {
+  return (
+    <button 
+      className={`btn btn-${variant}`}
+      onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
+    >
+      {children}
+    </button>
+  );
+};
+```
+
+### Vue Components
+
+- Use Composition API for new components
+- Implement proper prop validation
+- Use computed properties for derived state
+- Implement proper event handling
+- Use provide/inject for dependency injection
+
+### Angular Components
+
+- Use OnPush change detection strategy
+- Implement proper lifecycle hooks
+- Use reactive forms
+- Implement proper dependency injection
+- Use Angular Material for consistent UI
+
+## State Management
+
+### React State
+
+- Use useState for local state
+- Use useReducer for complex state logic
+- Use Context API for global state
+- Consider Redux Toolkit for complex applications
+- Implement proper state normalization
+
+### Vue State
+
+- Use reactive/ref for reactive state
+- Use Pinia for global state management
+- Implement proper state mutations
+- Use computed properties for derived state
+
+### Angular State
+
+- Use RxJS for reactive programming
+- Implement NgRx for complex state management
+- Use services for state management
+- Implement proper state selectors
+
+## Styling
+
+### CSS Best Practices
+
+- Use CSS custom properties (variables)
+- Implement proper CSS organization
+- Use BEM methodology for class naming
+- Implement responsive design with mobile-first approach
+- Use CSS Grid and Flexbox appropriately
+
+```css
+/* Good example */
+.button {
+  --button-padding: 0.75rem 1.5rem;
+  --button-border-radius: 0.375rem;
+  --button-font-weight: 500;
+  
+  padding: var(--button-padding);
+  border-radius: var(--button-border-radius);
+  font-weight: var(--button-font-weight);
+  transition: all 0.2s ease-in-out;
+}
+
+.button--primary {
+  --button-background: #3b82f6;
+  --button-color: #ffffff;
+  
+  background-color: var(--button-background);
+  color: var(--button-color);
+}
+
+.button--primary:hover {
+  --button-background: #2563eb;
+}
+```
+
+### CSS-in-JS
+
+- Use styled-components or emotion
+- Implement proper theming
+- Use TypeScript for type safety
+- Implement proper responsive design
+
+### CSS Frameworks
+
+- Use Tailwind CSS for utility-first approach
+- Implement proper component composition
+- Use design system tokens
+- Follow consistent spacing and typography
+
+## Performance Optimization
+
+### Bundle Optimization
+
+- Implement code splitting
+- Use dynamic imports for lazy loading
+- Optimize bundle size
+- Use tree shaking
+- Implement proper caching strategies
+
+### Runtime Performance
+
+- Use React.memo, useMemo, useCallback appropriately
+- Implement virtual scrolling for large lists
+- Use proper image optimization
+- Implement proper loading states
+- Use performance monitoring tools
+
+### Image Optimization
+
+- Use WebP format when possible
+- Implement responsive images
+- Use proper alt text for accessibility
+- Implement lazy loading
+- Use appropriate image sizes
+
+## Accessibility
+
+### WCAG 2.1 Compliance
+
+- Implement proper ARIA labels
+- Use semantic HTML elements
+- Ensure proper keyboard navigation
+- Implement proper focus management
+- Use proper color contrast ratios
+
+### Screen Reader Support
+
+- Use proper heading hierarchy
+- Implement proper form labels
+- Use descriptive link text
+- Implement proper table headers
+- Use proper button labels
+
+## Testing
+
+### Unit Testing
+
+- Test component behavior, not implementation
+- Use React Testing Library or Vue Test Utils
+- Test user interactions
+- Test error states
+- Test accessibility features
+
+### Integration Testing
+
+- Test component integration
+- Test API integration
+- Test routing
+- Test state management
+- Test user workflows
+
+### E2E Testing
+
+- Use Playwright or Cypress
+- Test critical user journeys
+- Test cross-browser compatibility
+- Test responsive design
+- Test accessibility
+
+## SEO
+
+### Meta Tags
+
+- Implement proper title tags
+- Use meta descriptions
+- Implement Open Graph tags
+- Use structured data
+- Implement proper canonical URLs
+
+### Performance
+
+- Optimize Core Web Vitals
+- Implement proper caching
+- Use CDN for static assets
+- Optimize images and fonts
+- Implement proper compression
+
+## Security
+
+### XSS Prevention
+
+- Sanitize user inputs
+- Use proper escaping
+- Implement Content Security Policy
+- Use proper validation
+- Avoid dangerouslySetInnerHTML
+
+### CSRF Protection
+
+- Use CSRF tokens
+- Implement proper headers
+- Use SameSite cookies
+- Validate requests
+- Use proper authentication
+
+## Build and Deployment
+
+### Build Optimization
+
+- Use proper build tools (Vite, Webpack, etc.)
+- Implement proper environment variables
+- Use proper source maps
+- Implement proper asset optimization
+- Use proper caching strategies
+
+### Deployment
+
+- Use proper CI/CD pipelines
+- Implement proper environment management
+- Use proper CDN configuration
+- Implement proper monitoring
+- Use proper error tracking
+
+## Code Organization
+
+### File Structure
+
+```
+src/
+├── components/
+│   ├── common/
+│   ├── forms/
+│   └── layout/
+├── hooks/
+├── services/
+├── utils/
+├── types/
+├── styles/
+└── tests/
+```
+
+### Naming Conventions
+
+- Use PascalCase for components
+- Use camelCase for functions and variables
+- Use kebab-case for file names
+- Use SCREAMING_SNAKE_CASE for constants
+- Use descriptive names
+
+## Error Handling
+
+### Error Boundaries
+
+- Implement error boundaries for React
+- Handle errors gracefully
+- Provide fallback UI
+- Log errors properly
+- Implement error reporting
+
+### User Feedback
+
+- Show loading states
+- Display error messages
+- Implement retry mechanisms
+- Provide helpful error messages
+- Use proper notifications
+
+## Internationalization
+
+### i18n Implementation
+
+- Use react-i18next or vue-i18n
+- Implement proper translation keys
+- Use proper pluralization
+- Implement proper date/time formatting
+- Use proper number formatting
+
+### RTL Support
+
+- Implement proper RTL layout
+- Use proper CSS for RTL
+- Test with RTL languages
+- Use proper text direction
+- Implement proper icon handling
+
+---
+
+_These rules ensure high-quality, accessible, and performant frontend applications._

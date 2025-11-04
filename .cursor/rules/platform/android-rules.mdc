@@ -1,0 +1,586 @@
+---
+description: Android Development Rules - Rules for Android development with Kotlin/Java. Kích hoạt khi working với Android development, Kotlin projects, hoặc Android ecosystem development.
+alwaysApply: false
+---
+
+# Android Development Rules
+
+## Core Principles
+
+- **REQUIRED**: Use Kotlin as primary language
+- **REQUIRED**: Follow Material Design guidelines
+- **REQUIRED**: Implement proper lifecycle management
+- **REQUIRED**: Use Jetpack Compose for modern UI
+- **REQUIRED**: Follow Android architecture components
+- **REQUIRED**: Implement proper error handling and logging
+
+## Project Structure
+
+### Standard Android Project Structure
+
+```
+app/
+├── src/
+│   ├── main/
+│   │   ├── java/com/yourapp/
+│   │   │   ├── ui/                    # UI components
+│   │   │   │   ├── activities/
+│   │   │   │   ├── fragments/
+│   │   │   │   ├── adapters/
+│   │   │   │   └── composables/
+│   │   │   ├── data/                  # Data layer
+│   │   │   │   ├── local/
+│   │   │   │   ├── remote/
+│   │   │   │   └── repository/
+│   │   │   ├── domain/                # Domain layer
+│   │   │   │   ├── models/
+│   │   │   │   ├── usecases/
+│   │   │   │   └── repository/
+│   │   │   └── di/                    # Dependency injection
+│   │   ├── res/                       # Resources
+│   │   │   ├── layout/
+│   │   │   ├── values/
+│   │   │   ├── drawable/
+│   │   │   └── mipmap/
+│   │   └── AndroidManifest.xml
+│   └── test/                          # Unit tests
+└── build.gradle.kts
+```
+
+## Architecture Patterns
+
+### MVVM with Clean Architecture
+
+```kotlin
+// Domain Layer
+data class User(
+    val id: String,
+    val name: String,
+    val email: String
+)
+
+interface UserRepository {
+    suspend fun getUser(id: String): Result<User>
+    suspend fun saveUser(user: User): Result<Unit>
+}
+
+class GetUserUseCase(
+    private val userRepository: UserRepository
+) {
+    suspend operator fun invoke(id: String): Result<User> {
+        return userRepository.getUser(id)
+    }
+}
+
+// Data Layer
+class UserRepositoryImpl(
+    private val localDataSource: UserLocalDataSource,
+    private val remoteDataSource: UserRemoteDataSource
+) : UserRepository {
+    override suspend fun getUser(id: String): Result<User> {
+        return try {
+            val user = localDataSource.getUser(id)
+            if (user != null) {
+                Result.success(user)
+            } else {
+                val remoteUser = remoteDataSource.getUser(id)
+                localDataSource.saveUser(remoteUser)
+                Result.success(remoteUser)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
+
+// Presentation Layer
+@Composable
+fun UserScreen(
+    viewModel: UserViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    
+    when (uiState) {
+        is UserUiState.Loading -> LoadingScreen()
+        is UserUiState.Success -> UserContent(uiState.user)
+        is UserUiState.Error -> ErrorScreen(uiState.message)
+    }
+}
+
+@HiltViewModel
+class UserViewModel @Inject constructor(
+    private val getUserUseCase: GetUserUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow<UserUiState>(UserUiState.Loading)
+    val uiState: StateFlow<UserUiState> = _uiState.asStateFlow()
+    
+    fun loadUser(id: String) {
+        viewModelScope.launch {
+            getUserUseCase(id)
+                .onSuccess { user ->
+                    _uiState.value = UserUiState.Success(user)
+                }
+                .onFailure { error ->
+                    _uiState.value = UserUiState.Error(error.message ?: "Unknown error")
+                }
+        }
+    }
+}
+```
+
+## Jetpack Compose
+
+### Component Design
+
+```kotlin
+@Composable
+fun UserCard(
+    user: User,
+    onUserClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onUserClick(user.id) },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = user.name,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = user.email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun UserCardPreview() {
+    MaterialTheme {
+        UserCard(
+            user = User(
+                id = "1",
+                name = "John Doe",
+                email = "john@example.com"
+            ),
+            onUserClick = {}
+        )
+    }
+}
+```
+
+### State Management
+
+```kotlin
+@Composable
+fun UserListScreen(
+    viewModel: UserListViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    
+    LaunchedEffect(Unit) {
+        viewModel.loadUsers()
+    }
+    
+    when (uiState) {
+        is UserListUiState.Loading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        is UserListUiState.Success -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(uiState.users) { user ->
+                    UserCard(
+                        user = user,
+                        onUserClick = viewModel::onUserClick
+                    )
+                }
+            }
+        }
+        is UserListUiState.Error -> {
+            ErrorScreen(
+                message = uiState.message,
+                onRetry = { viewModel.loadUsers() }
+            )
+        }
+    }
+}
+```
+
+## Dependency Injection
+
+### Hilt Setup
+
+```kotlin
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+    
+    @Provides
+    @Singleton
+    fun provideUserRepository(
+        localDataSource: UserLocalDataSource,
+        remoteDataSource: UserRemoteDataSource
+    ): UserRepository = UserRepositoryImpl(localDataSource, remoteDataSource)
+    
+    @Provides
+    @Singleton
+    fun provideUserLocalDataSource(
+        userDao: UserDao
+    ): UserLocalDataSource = UserLocalDataSourceImpl(userDao)
+    
+    @Provides
+    @Singleton
+    fun provideUserRemoteDataSource(
+        apiService: ApiService
+    ): UserRemoteDataSource = UserRemoteDataSourceImpl(apiService)
+}
+
+@Module
+@InstallIn(ViewModelComponent::class)
+object ViewModelModule {
+    
+    @Provides
+    fun provideGetUserUseCase(
+        userRepository: UserRepository
+    ): GetUserUseCase = GetUserUseCase(userRepository)
+}
+```
+
+## Data Layer
+
+### Room Database
+
+```kotlin
+@Entity(tableName = "users")
+data class UserEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val email: String,
+    @ColumnInfo(name = "created_at") val createdAt: Long
+)
+
+@Dao
+interface UserDao {
+    @Query("SELECT * FROM users WHERE id = :id")
+    suspend fun getUserById(id: String): UserEntity?
+    
+    @Query("SELECT * FROM users")
+    suspend fun getAllUsers(): List<UserEntity>
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUser(user: UserEntity)
+    
+    @Delete
+    suspend fun deleteUser(user: UserEntity)
+}
+
+@Database(
+    entities = [UserEntity::class],
+    version = 1,
+    exportSchema = false
+)
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun userDao(): UserDao
+}
+```
+
+### Network Layer
+
+```kotlin
+interface ApiService {
+    @GET("users/{id}")
+    suspend fun getUser(@Path("id") id: String): UserDto
+    
+    @GET("users")
+    suspend fun getUsers(): List<UserDto>
+    
+    @POST("users")
+    suspend fun createUser(@Body user: CreateUserDto): UserDto
+}
+
+@Singleton
+class ApiService @Inject constructor(
+    @ApplicationContext context: Context
+) {
+    private val retrofit = Retrofit.Builder()
+        .baseUrl("https://api.example.com/")
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+    
+    val service: ApiService = retrofit.create(ApiService::class.java)
+}
+```
+
+## Testing
+
+### Unit Tests
+
+```kotlin
+@ExtendWith(MockKExtension::class)
+class GetUserUseCaseTest {
+    
+    @MockK
+    private lateinit var userRepository: UserRepository
+    
+    private lateinit var getUserUseCase: GetUserUseCase
+    
+    @BeforeEach
+    fun setup() {
+        getUserUseCase = GetUserUseCase(userRepository)
+    }
+    
+    @Test
+    fun `when getUser is called with valid id, should return success`() = runTest {
+        // Given
+        val userId = "1"
+        val expectedUser = User(id = userId, name = "John", email = "john@example.com")
+        every { userRepository.getUser(userId) } returns Result.success(expectedUser)
+        
+        // When
+        val result = getUserUseCase(userId)
+        
+        // Then
+        assertTrue(result.isSuccess)
+        assertEquals(expectedUser, result.getOrNull())
+    }
+    
+    @Test
+    fun `when getUser is called with invalid id, should return failure`() = runTest {
+        // Given
+        val userId = "invalid"
+        val exception = Exception("User not found")
+        every { userRepository.getUser(userId) } returns Result.failure(exception)
+        
+        // When
+        val result = getUserUseCase(userId)
+        
+        // Then
+        assertTrue(result.isFailure)
+        assertEquals(exception, result.exceptionOrNull())
+    }
+}
+```
+
+### UI Tests
+
+```kotlin
+@HiltAndroidTest
+class UserScreenTest {
+    
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+    
+    @get:Rule
+    val composeTestRule = createComposeRule()
+    
+    @Before
+    fun init() {
+        hiltRule.inject()
+    }
+    
+    @Test
+    fun userScreen_displaysUserData() {
+        // Given
+        val user = User(id = "1", name = "John Doe", email = "john@example.com")
+        
+        // When
+        composeTestRule.setContent {
+            MaterialTheme {
+                UserScreen()
+            }
+        }
+        
+        // Then
+        composeTestRule.onNodeWithText("John Doe").assertIsDisplayed()
+        composeTestRule.onNodeWithText("john@example.com").assertIsDisplayed()
+    }
+}
+```
+
+## Performance Optimization
+
+### Image Loading
+
+```kotlin
+@Composable
+fun UserAvatar(
+    imageUrl: String,
+    modifier: Modifier = Modifier
+) {
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(imageUrl)
+            .crossfade(true)
+            .build(),
+        contentDescription = "User avatar",
+        modifier = modifier.size(48.dp),
+        contentScale = ContentScale.Crop,
+        error = painterResource(R.drawable.ic_person),
+        placeholder = painterResource(R.drawable.ic_person_placeholder)
+    )
+}
+```
+
+### Lazy Loading
+
+```kotlin
+@Composable
+fun UserList(
+    users: List<User>,
+    onUserClick: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(
+            items = users,
+            key = { it.id }
+        ) { user ->
+            UserCard(
+                user = user,
+                onUserClick = onUserClick
+            )
+        }
+    }
+}
+```
+
+## Security
+
+### Data Encryption
+
+```kotlin
+class SecurePreferences @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+    
+    private val encryptedPrefs = EncryptedSharedPreferences.create(
+        context,
+        "secure_prefs",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+    
+    fun saveString(key: String, value: String) {
+        encryptedPrefs.edit()
+            .putString(key, value)
+            .apply()
+    }
+    
+    fun getString(key: String, defaultValue: String = ""): String {
+        return encryptedPrefs.getString(key, defaultValue) ?: defaultValue
+    }
+}
+```
+
+## Error Handling
+
+### Result Wrapper
+
+```kotlin
+sealed class Result<out T> {
+    data class Success<out T>(val data: T) : Result<T>()
+    data class Error(val exception: Throwable) : Result<Nothing>()
+}
+
+inline fun <T> Result<T>.onSuccess(action: (T) -> Unit): Result<T> {
+    if (this is Result.Success) action(data)
+    return this
+}
+
+inline fun <T> Result<T>.onFailure(action: (Throwable) -> Unit): Result<T> {
+    if (this is Result.Error) action(exception)
+    return this
+}
+```
+
+### Error UI
+
+```kotlin
+@Composable
+fun ErrorScreen(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Error,
+            contentDescription = "Error",
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Retry")
+        }
+    }
+}
+```
+
+## Best Practices
+
+### Code Organization
+- Use package-by-feature structure
+- Separate UI, data, and domain layers
+- Use dependency injection (Hilt)
+- Follow single responsibility principle
+
+### Performance
+- Use LazyColumn for large lists
+- Implement proper image loading
+- Use ViewModel for state management
+- Avoid memory leaks
+
+### Testing
+- Write unit tests for business logic
+- Test UI components with Compose Testing
+- Use dependency injection for testability
+- Mock external dependencies
+
+### Security
+- Encrypt sensitive data
+- Use secure network communication
+- Validate user inputs
+- Follow Android security best practices
+
+---
+
+_These rules ensure high-quality, maintainable, and performant Android applications._

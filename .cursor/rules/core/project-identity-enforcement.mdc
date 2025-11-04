@@ -1,0 +1,246 @@
+---
+description: Project Identity Enforcement - Rules for maintaining project identity và consistency. Kích hoạt khi working với project setup, identity management, hoặc project configuration tasks.
+alwaysApply: true
+---
+
+# Project Identity Enforcement
+
+## Core Principles
+
+- **_BẮT BUỘC_** kiểm tra .project-identity để biết cấu trúc và ngôn ngữ dự án
+- **_BẮT BUỘC_** tạo .project-identity nếu chưa có và yêu cầu người dùng bổ sung thông tin
+- **_BẮT BUỘC_** duy trì tính nhất quán trong toàn bộ dự án
+- **_BẮT BUỘC_** sử dụng tiếng Anh làm ngôn ngữ chính cho tất cả code và tài liệu kỹ thuật
+
+## Project Identity File Structure
+
+The `.project-identity` file should contain:
+
+```json
+{
+  "projectName": "Project Name",
+  "projectType": "web|mobile|desktop|api|library",
+  "primaryLanguage": "en",
+  "techStack": {
+    "frontend": ["React", "TypeScript"],
+    "backend": ["Node.js", "Express"],
+    "database": ["PostgreSQL"],
+    "deployment": ["Docker", "AWS"]
+  },
+  "projectStage": "planning|development|testing|production",
+  "targetAudience": "description of target users",
+  "projectGoals": ["goal1", "goal2", "goal3"],
+  "codingStandards": {
+    "language": "en",
+    "namingConvention": "camelCase|snake_case|kebab-case",
+    "indentation": "spaces|tabs",
+    "lineLength": 80
+  },
+  "documentationLanguage": "en",
+  "createdDate": "YYYY-MM-DD",
+  "lastUpdated": "YYYY-MM-DD"
+}
+```
+
+## Project Identity Validation
+
+### Required Fields Check
+
+- [ ] projectName: Must be present and descriptive
+- [ ] projectType: Must be one of valid types
+- [ ] primaryLanguage: Must be "en" for English
+- [ ] techStack: Must include at least one technology
+- [ ] projectStage: Must be current stage
+- [ ] targetAudience: Must be clearly defined
+- [ ] projectGoals: Must have at least one goal
+- [ ] codingStandards: Must be defined
+- [ ] documentationLanguage: Must be "en"
+
+### Validation Process
+
+1. **Check if .project-identity exists**
+   - If not exists: Create template and ask user to fill
+   - If exists: Validate all required fields
+
+2. **Validate project consistency**
+   - Check if current work aligns with project type
+   - Verify tech stack choices are appropriate
+   - Ensure coding standards are followed
+
+3. **Update project identity when needed**
+   - When project evolves significantly
+   - When tech stack changes
+   - When project goals change
+
+## Language Enforcement
+
+### Code Language Rules
+
+- **REQUIRED**: All code must be in English
+- **REQUIRED**: Variable names, function names, class names must be in English
+- **REQUIRED**: Comments must be in English
+- **REQUIRED**: Error messages must be in English
+- **REQUIRED**: Log messages must be in English
+
+### Documentation Language Rules
+
+- **REQUIRED**: All technical documentation must be in English
+- **REQUIRED**: README files must be in English
+- **REQUIRED**: API documentation must be in English
+- **REQUIRED**: Code comments must be in English
+- **ALLOWED**: User-facing text can be in local language if needed
+
+### File Naming Rules
+
+- **REQUIRED**: File names must use English words
+- **REQUIRED**: Directory names must use English words
+- **REQUIRED**: Use kebab-case for file names (e.g., `user-profile.js`)
+- **REQUIRED**: Use PascalCase for component files (e.g., `UserProfile.jsx`)
+
+## Project Type Specific Rules
+
+### Web Projects
+
+- Ensure responsive design principles
+- Follow web accessibility standards
+- Use semantic HTML
+- Implement proper SEO practices
+
+### Mobile Projects
+
+- Follow platform-specific guidelines (iOS/Android)
+- Ensure touch-friendly interfaces
+- Implement proper navigation patterns
+- Consider different screen sizes
+
+### API Projects
+
+- Follow RESTful principles
+- Implement proper error handling
+- Use appropriate HTTP status codes
+- Provide comprehensive API documentation
+
+### Library Projects
+
+- Ensure backward compatibility
+- Provide clear API documentation
+- Include comprehensive tests
+- Follow semantic versioning
+
+## Tech Stack Consistency
+
+### Frontend Consistency
+
+- Use consistent component patterns
+- Follow established state management patterns
+- Maintain consistent styling approach
+- Use consistent routing patterns
+
+### Backend Consistency
+
+- Follow established API patterns
+- Use consistent error handling
+- Maintain consistent database patterns
+- Use consistent authentication patterns
+
+### Database Consistency
+
+- Use consistent naming conventions
+- Follow established schema patterns
+- Maintain consistent indexing strategies
+- Use consistent migration patterns
+
+## Project Stage Management
+
+### Planning Stage
+
+- Focus on requirements gathering
+- Create comprehensive documentation
+- Plan architecture and tech stack
+- Define project goals clearly
+
+### Development Stage
+
+- Follow established coding standards
+- Implement features according to plan
+- Maintain code quality standards
+- Regular testing and validation
+
+### Testing Stage
+
+- Comprehensive test coverage
+- Performance testing
+- Security testing
+- User acceptance testing
+
+### Production Stage
+
+- Monitor application performance
+- Maintain security standards
+- Regular updates and maintenance
+- User feedback collection
+
+## Identity Update Process
+
+### When to Update
+
+- Project goals change significantly
+- Tech stack changes
+- Target audience changes
+- Project type changes
+- Major architectural changes
+
+### How to Update
+
+1. **Backup current .project-identity**
+2. **Update relevant fields**
+3. **Validate new identity**
+4. **Update related documentation**
+5. **Notify team members**
+6. **Update project documentation**
+
+## Quality Assurance
+
+### Identity Consistency Check
+
+- [ ] All code follows language rules
+- [ ] All documentation follows language rules
+- [ ] File names follow naming conventions
+- [ ] Tech stack choices are consistent
+- [ ] Project goals are clear and achievable
+- [ ] Target audience is well-defined
+
+### Regular Validation
+
+- Check identity consistency weekly
+- Validate tech stack choices monthly
+- Review project goals quarterly
+- Update identity when major changes occur
+
+## Integration with Other Rules
+
+- Works with file-protection-rules for backup
+- Integrates with development-rules for coding standards
+- Aligns with planning-workflow for project goals
+- Supports testing-rules for quality assurance
+
+## Error Handling
+
+### Missing Project Identity
+
+- Create template immediately
+- Ask user to fill required information
+- Provide guidance on each field
+- Validate before proceeding with work
+
+### Inconsistent Identity
+
+- Identify inconsistencies
+- Suggest corrections
+- Ask user to confirm changes
+- Update identity file
+- Update related documentation
+
+---
+
+_These rules ensure project identity consistency and maintainability throughout the development lifecycle._

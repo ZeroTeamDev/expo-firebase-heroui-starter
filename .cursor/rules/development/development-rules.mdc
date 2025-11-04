@@ -1,0 +1,193 @@
+---
+description: General development rules applicable across various technologies - Code quality standards, SOLID principles, error handling, và best practices cho multi-language development. Kích hoạt khi working với any programming language, code review, hoặc quality assurance tasks.
+alwaysApply: false
+---
+
+## Code Quality
+
+- Write clean, readable code
+- Follow consistent naming conventions
+- Add appropriate comments for complex logic
+- Keep functions and classes focused and single-purpose
+- Follow defensive programming practices
+- Implement proper error handling
+- Use meaningful variable and function names
+
+## Architecture
+
+- Separate concerns clearly across layers (presentation, business logic, data)
+- Use dependency injection to decouple components
+- Prefer composition over inheritance
+- Design APIs that are easy to use and extend
+- Apply Domain-Driven Design for complex projects
+- Follow SOLID principles
+
+## Security
+
+- Validate all user inputs
+- Use parameterized queries to prevent SQL injection
+- Encrypt sensitive data (passwords, tokens, PII)
+- Implement proper authentication and authorization
+- Follow OWASP top 10 guidelines
+- Use HTTPS for all API endpoints
+- Implement proper session management
+
+## Performance
+
+- Optimize database queries to avoid N+1 problems
+- Implement caching for static data and expensive queries
+- Avoid blocking operations in event loops
+- Use pagination for large data sets
+- Lazy load components and modules when possible
+- Profile code to identify bottlenecks
+- Use appropriate data structures and algorithms
+
+## Error Handling
+
+- Handle all exceptions and errors gracefully
+- Provide helpful but safe error messages
+- Log errors properly with sufficient context for debugging
+- Implement retry mechanisms for unstable operations
+- Use circuit breakers for external services
+- Create fallback plans for critical operations
+
+## Testing
+
+- Write unit tests with high test coverage
+- Implement integration tests for critical flows
+- Use mocking to isolate dependencies
+- Follow testing pyramid (many unit tests, fewer e2e tests)
+- Write tests that are easy to read and maintain
+- Test edge cases and error conditions
+- Automate test execution
+
+## API Design
+
+- Use RESTful principles or GraphQL
+- Version APIs properly
+- Provide comprehensive documentation (Swagger/OpenAPI)
+- Implement proper error responses with HTTP status codes
+- Follow JSON standards
+- Use consistent naming conventions
+- Implement rate limiting and throttling
+
+## Development Workflow
+
+- Use version control (Git) effectively
+- Follow conventional commits
+- Perform code reviews for all non-trivial changes
+- Implement Continuous Integration/Continuous Deployment
+- Ensure backwards compatibility when possible
+- Use feature branches for new development
+- Keep main branch stable and deployable
+
+## Configuration
+
+- Use environment variables for configuration
+- Separate configuration from code
+- Implement configuration validation
+- Use sensible default values
+- Document all configuration options
+- Use configuration management tools
+- Implement configuration versioning
+
+## Documentation
+
+- Write clear and comprehensive documentation
+- Keep documentation up to date
+- Use consistent documentation format
+- Include code examples
+- Document API endpoints
+- Create user guides and tutorials
+- Maintain changelog
+
+## Code Organization
+
+- Organize code into logical modules
+- Use consistent file and folder naming
+- Separate concerns appropriately
+- Keep related files together
+- Use appropriate design patterns
+- Maintain clean code structure
+
+## Dependencies
+
+- Keep dependencies up to date
+- Use dependency management tools
+- Avoid unnecessary dependencies
+- Document dependency choices
+- Use lock files for reproducible builds
+- Regularly audit dependencies for security issues
+
+## Monitoring and Logging
+
+- Implement comprehensive logging
+- Use structured logging formats
+- Monitor application performance
+- Set up alerting for critical issues
+- Track user behavior and errors
+- Implement health checks
+- Use monitoring tools effectively
+
+## Code Review Guidelines
+
+- Review code for functionality, not just style
+- Check for security vulnerabilities
+- Verify test coverage
+- Ensure code follows project standards
+- Look for potential performance issues
+- Check for proper error handling
+- Verify documentation is updated
+
+## Refactoring
+
+- Refactor code regularly to improve quality
+- Use automated refactoring tools when possible
+- Test thoroughly after refactoring
+- Refactor in small, incremental steps
+- Document refactoring decisions
+- Maintain backwards compatibility
+
+## Best Practices
+
+- Follow the principle of least privilege
+- Use immutable data structures when possible
+- Implement proper resource cleanup
+- Use appropriate design patterns
+- Avoid premature optimization
+- Write self-documenting code
+- Use type systems effectively
+
+## Language-Specific Guidelines
+
+### JavaScript/TypeScript
+- Use TypeScript for type safety
+- Follow ESLint rules
+- Use modern JavaScript features
+- Implement proper async/await patterns
+- Use proper module systems
+
+### Python
+- Follow PEP 8 style guide
+- Use type hints
+- Implement proper exception handling
+- Use virtual environments
+- Follow Python best practices
+
+### Java
+- Follow Java naming conventions
+- Use proper package structure
+- Implement proper exception handling
+- Use appropriate design patterns
+- Follow Java best practices
+
+### C#
+- Follow C# naming conventions
+- Use proper namespace structure
+- Implement proper exception handling
+- Use LINQ effectively
+- Follow .NET best practices
+
+---
+
+_These rules ensure high-quality, maintainable, and secure code across all technologies._

@@ -1,0 +1,347 @@
+---
+description: Planning Workflow - Quy trình brainstorm và lên kế hoạch dự án có cấu trúc. Kích hoạt khi working với project planning, requirements analysis, hoặc structured project development.
+alwaysApply: false
+---
+
+# Planning Workflow
+
+## Core Principles
+
+- **_BẮT BUỘC_** kiểm tra file Brainstorm_[TenDuAn].md hoàn chỉnh trước khi lên kế hoạch
+- **_BẮT BUỘC_** chỉ được planning khi brainstorm đã hoàn thành tất cả 3 phases
+- **_BẮT BUỘC_** dựa trên kết quả brainstorm để tạo planning chi tiết
+- **_BẮT BUỘC_** rà soát codebase hiện tại trước khi lên kế hoạch cho tính năng mới
+- **_BẮT BUỘC_** tạo tài liệu kế hoạch chi tiết trước khi bắt đầu code
+- **_BẮT BUỘC_** tạo tasks trong `docs/ai/planning/tasks.md` theo structured format
+- **_BẮT BUỘC_** validate project structure và tạo `docs/ai/planning/` nếu chưa tồn tại
+- **_BẮT BUỘC_** thực hiện template selection ngay sau khi hoàn thành planning
+- **_BẮT BUỘC_** tạo file Template_Selection.md với templates được chọn và loại bỏ
+- **_BẮT BUỘC_** lên kế hoạch thời gian và đánh giá độ phức tạp cho từng task
+- **_BẮT BUỘC_** format tasks theo structured task format với dependencies và acceptance criteria
+- **_BẮT BUỘC_** xác định rõ đầu ra mong muốn và tiêu chí thành công
+- **_BẮT BUỘC_** tuân thủ quy trình 4 vai trò: Planner > Architect > Builder > Tester
+- **_BẮT BUỘC_** không bỏ qua bước Architect để "code cho nhanh"
+- **_KHUYẾN NGHỊ_** chia nhỏ các task phức tạp thành nhiều task nhỏ hơn
+- **_KHUYẾN NGHỊ_** tìm hiểu các giải pháp tương tự để có cái nhìn tổng quan
+- **_KHUYẾN NGHỊ_** bắt đầu với template tối giản và thêm dần khi cần thiết
+- **_NGHIÊM CẤM_** bắt đầu planning khi chưa có file brainstorm hoàn chỉnh
+- **_NGHIÊM CẤM_** bắt đầu code khi chưa có kế hoạch rõ ràng
+- **_NGHIÊM CẤM_** tạo tasks ở nơi khác ngoài `docs/ai/planning/tasks.md`
+- **_NGHIÊM CẤM_** sử dụng quá nhiều template gây phức tạp không cần thiết
+
+## Brainstorm Process
+
+1. **Understand Context**
+   - Ask at least 3 questions to understand context and needs
+   - Understand motivation and goals behind the request
+   - Identify core problems that need to be solved
+
+2. **Expand Thinking**
+   - Suggest at least 2-3 different approaches
+   - Brainstorm without limiting ideas and solutions
+   - Explore creative and unconventional solutions
+
+3. **Narrow & Focus**
+   - Analyze pros and cons of each approach
+   - Choose the most suitable solution based on defined criteria
+   - Define scope and limitations of the plan
+
+## EARS Format for Requirements
+
+### EARS (Easy Approach to Requirements Syntax)
+
+Use EARS format to write clear and unambiguous requirements:
+
+#### 1. Ubiquitous Requirements
+
+```
+THE SYSTEM SHALL [always do something]
+Example: THE SYSTEM SHALL log all user authentication attempts
+```
+
+#### 2. Event-Driven Requirements
+
+```
+WHEN [trigger] THE SYSTEM SHALL [response]
+Example: WHEN user clicks login button THE SYSTEM SHALL validate credentials
+
+WHILE [state] THE SYSTEM SHALL [behavior]
+Example: WHILE user session is active THE SYSTEM SHALL maintain authentication state
+```
+
+#### 3. State-Driven Requirements
+
+```
+WHILE [in state] THE SYSTEM SHALL [behavior]
+Example: WHILE system is in maintenance mode THE SYSTEM SHALL display maintenance message
+```
+
+#### 4. Conditional Requirements
+
+```
+IF [condition] THEN THE SYSTEM SHALL [action]
+Example: IF password is incorrect 3 times THEN THE SYSTEM SHALL lock the account
+
+WHERE [feature applies] THE SYSTEM SHALL [behavior]
+Example: WHERE user has admin role THE SYSTEM SHALL show admin dashboard
+```
+
+#### 5. Optional Requirements
+
+```
+WHERE [feature is optional] THE SYSTEM SHALL [behavior]
+Example: WHERE dark mode is enabled THE SYSTEM SHALL use dark color scheme
+```
+
+## Brainstorm Questions by Project Type
+
+### General Questions
+
+- "What is the main goal you want to achieve?"
+- "Who are the main users and what problems do they need to solve?"
+- "Are there any time or resource constraints?"
+- "Can you share examples of similar solutions you like?"
+- "Are there any special requirements for performance, security, or scalability?"
+
+### Frontend Projects
+
+- "Do you have any wireframes or specific UI designs?"
+- "What devices and browsers does the application need to support?"
+- "Are there any specific accessibility requirements?"
+- "What design style do you prefer? (Material, Fluent, Minimal...)"
+- "Are there any requirements for page load time or bundle size?"
+
+### Backend Projects
+
+- "What is the expected traffic volume?"
+- "Are there any real-time requirements?"
+- "What types of APIs and endpoints are needed?"
+- "What is the current database structure?"
+- "Are there any authentication and authorization requirements?"
+
+### Fullstack Projects
+
+- "How do you want to divide responsibilities between frontend and backend?"
+- "What types of data need to be stored and synchronized?"
+- "Are there any features that need offline processing?"
+- "What authentication and authorization mechanism do you expect?"
+- "Are there any SEO requirements?"
+
+## Planning Document Template
+
+```markdown
+# Plan: [Feature/Project Name]
+
+## 1. Overview
+
+- **Goal**: [Brief description of main goal]
+- **Scope**: [Define what is and is not in scope]
+- **Expected Output**: [List specific results that need to be achieved]
+
+## 2. Requirements (EARS Format)
+
+### Functional Requirements
+
+- THE SYSTEM SHALL [requirement 1]
+- WHEN [event] THE SYSTEM SHALL [requirement 2]
+- IF [condition] THEN THE SYSTEM SHALL [requirement 3]
+
+### Non-Functional Requirements
+
+- THE SYSTEM SHALL [performance requirement]
+- THE SYSTEM SHALL [security requirement]
+- THE SYSTEM SHALL [usability requirement]
+
+## 3. Current State Analysis
+
+- **Current Structure**: [Description of current code/project structure]
+- **Related Components**: [List related modules/components]
+- **Limitations & Constraints**: [Identify technical or business limitations]
+
+## 4. Proposed Solution
+
+- **Solution Overview**: [High-level description of solution]
+- **Design & Architecture**: [Describe structure and main components]
+- **Technology & Libraries**: [List technologies and libraries to be used]
+
+## 5. Template Selection & Configuration
+
+- **Platform Analysis**: [Identify main platform and tech stack]
+- **Template Requirements**: [List templates needed based on features]
+- **Selected Templates**:
+  - Core Templates: [List of mandatory core templates]
+  - Platform Templates: [Platform-specific templates]
+  - Feature Templates: [Templates for specific features]
+- **Excluded Templates**: [Templates to be removed and reasons]
+- **Integration Plan**: [Plan for integrating templates into workspace]
+
+## 6. Implementation Plan
+
+- **Task Breakdown**:
+  1. [Step 1] - [Description] - [Estimated time] - [Task ID: TASK-001]
+     - **EARS Requirement**: WHEN [trigger] THE SYSTEM SHALL [action]
+     - **Dependencies**: [List any dependencies]
+     - **Acceptance Criteria**: [Define success criteria]
+  2. [Step 2] - [Description] - [Estimated time] - [Task ID: TASK-002]
+     - **EARS Requirement**: THE SYSTEM SHALL [action]
+     - **Dependencies**: TASK-001
+     - **Acceptance Criteria**: [Define success criteria]
+     ...
+
+- **Priority & Dependencies**:
+  - P0: [Highest priority task] - [Dependencies: None]
+  - P1: [High priority task] - [Dependencies: TASK-001]
+  - P2: [Medium priority task] - [Dependencies: TASK-001, TASK-002]
+
+## 7. Testing & Evaluation
+
+- **Testing Plan**: [Describe how to test]
+- **Success Criteria**: [Define when feature is considered complete]
+- **Risks & Mitigation**: [List potential risks and mitigation strategies]
+
+## 8. Resources & References
+
+- [List reference documents and resources]
+```
+
+## Four-Role Process
+
+- **_BẮT BUỘC_** follow 4-step process when developing any feature
+- **_BẮT BUỘC_** don't skip Architect step to "code faster"
+- **_BẮT BUỘC_** create detailed plan before starting code
+
+### 1. Planner
+
+- Use AI to write PRD, draw user flows, choose tech stack
+- Clearly define scope and requirements
+- Create .md file with complete feature information
+- Reference similar experiences in `/experiences/`
+- Time for planning: 15-20% of total project time
+
+### 2. Architect
+
+- Break features into small, manageable tasks
+- Define logic for each screen and function
+- Determine data flow and component structure
+- Clearly describe API contract and database schema
+- Time for architecture: 20-25% of total project time
+
+### 3. Builder
+
+- Provide plan and spec to AI for code generation
+- Check generated code and ensure rule compliance
+- Apply defined code conventions
+- Commit code regularly after each small task
+- Time for building: 40-50% of total project time
+
+### 4. Tester
+
+- Use AI to check bugs and optimize code
+- Write test cases (unit test and integration test)
+- Evaluate performance and user experience
+- Fix discovered issues
+- Time for testing: 15-20% of total project time
+
+### Consequences of Skipping Process
+
+- When skipping Architect step: Code not synchronized, UI doesn't match backend
+- When skipping planning: Features don't meet actual needs, need to redo
+- When skipping testing: Product not stable, bugs appear during use
+
+## Implementation Process
+
+### Step 0: Prerequisites Check (Enhanced)
+
+- **MANDATORY**: Check if `Brainstorm_[ProjectName].md` file is complete
+- **MANDATORY**: Confirm all brainstorm information has been validated
+- **MANDATORY**: Ensure sufficient information to start planning
+- **MANDATORY**: Verify project context and tech stack compatibility
+- **FORBIDDEN**: Start planning when brainstorm is not complete
+
+### Step 1: Review Current Codebase (Context-Aware)
+
+- Analyze current project structure
+- Identify existing components/modules
+- Evaluate current code quality
+- Compare with industry best practices
+- Identify modernization opportunities
+- Identify technical debt that needs to be resolved with priority ranking
+
+## Codebase Review
+
+- **_BẮT BUỘC_** understand current project structure before planning
+- **_BẮT BUỘC_** identify modules/components that will be affected
+- **_BẮT BUỘC_** evaluate compatibility level of new features with codebase
+- **_BẮT BUỘC_** review patterns and best practices being applied
+- **_RECOMMENDED_** create dependency diagram between related components
+- **_RECOMMENDED_** identify reusable points and points that need changes
+
+## Complexity Assessment
+
+- Use complexity scale to estimate effort:
+
+  - **Simple** (S): 1-4 hours work, no high risk
+  - **Medium** (M): 4-8 hours work, some challenges
+  - **Complex** (L): 8-16 hours work, many challenges
+  - **Very Complex** (XL): >16 hours, need to break into multiple tasks
+
+- Determine complexity based on factors:
+  - Number of affected components
+  - Level of technical and domain knowledge
+  - Performance and security requirements
+  - Scalability and maintainability capabilities
+
+## Implementation Planning
+
+- **_BẮT BUỘC_** break work into specific tasks
+- **_BẮT BUỘC_** identify task dependencies (which tasks must be completed first)
+- **_BẮT BUỘC_** estimate time for each task
+- **_BẮT BUỘC_** identify milestones and checkpoints
+- **_BẮT BUỘC_** plan testing for each component
+- **_RECOMMENDED_** group tasks by module or function
+- **_RECOMMENDED_** build visual roadmap
+
+## Risk Management
+
+- **_BẮT BUỘC_** identify potential risks for each part of the plan
+- **_BẮT BUỘC_** assess impact and likelihood of each risk
+- **_BẮT BUỘC_** plan contingencies for high-impact risks
+- **_BẮT BUỘC_** establish rollback plan in case of failure
+- **_RECOMMENDED_** prioritize proof-of-concept for high-risk parts
+
+## Integration with Other Rules
+
+- **_BẮT BUỘC_** follow file-protection-rules before making major changes
+- **_BẮT BUỘC_** apply optimization principles from cursor-optimization-rules
+- **_BẮT BUỘC_** use development-rules for code quality
+- **_BẮT BUỘC_** follow project-identity-enforcement for consistency
+
+## Planning Output
+
+- Complete planning document saved in `docs/ai/planning/`
+- Update `Decisions.md` with important design decisions
+- Update `Codebase.md` if project structure changes significantly
+- Visual roadmap (if needed) in `docs/ai/planning/roadmaps/`
+- Task checklist broken down in `docs/ai/planning/tasks/`
+- Confirm user approval of plan before implementation
+
+## Planning Lifecycle
+
+1. **Brainstorming**: Collect ideas and requirements from users
+2. **Analysis**: Review codebase and assess feasibility
+3. **Planning**: Create detailed planning document
+4. **Confirmation**: Get approval from user
+5. **Implementation**: Execute according to plan
+6. **Evaluation**: Check success criteria
+7. **Adjustment**: Update plan based on feedback and results
+
+## Feedback & Improvement
+
+- After completing plan, collect feedback from user
+- Evaluate effectiveness of planning process
+- Update process based on lessons learned
+- Record lessons learned in `Decisions.md`
+
+---
+
+_This workflow ensures comprehensive planning and successful project execution._
