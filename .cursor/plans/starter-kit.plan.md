@@ -4,6 +4,68 @@
 
 Xây dựng khung cấu trúc tái sử dụng cho mono-starter với module system, Firebase Functions chuẩn, UI components library, và AI layer architecture - không implement chi tiết module mà chỉ thiết kế scaffolding.
 
+## Tiến độ thực hiện (Progress)
+
+- Trạng thái tổng quan (cập nhật: 2025-11-06)
+  - Phase 1: Core Infrastructure — Done ✅
+  - Phase 2: UI Component Library — Done ✅
+  - Phase 3: Firebase Functions Architecture — Done ✅
+  - Phase 4: AI Layer Integration — Done ✅
+  - Phase 5: Navigation & Routing — Partial ⏳ (tabs động cần rà soát/hoàn thiện)
+  - Phase 6: Module Scaffolding — Done ✅
+  - Phase 7/8: Dependencies & Setup — Partial ⏳ (kiểm tra/hardening, CI, optional tools)
+  - Documentation — Done ✅
+  - Testing Strategy — Todo ❌
+  - Deployment — Partial ⏳ (scripts/rollback/checklist)
+
+### Chi tiết theo hạng mục
+
+- Phase 1: Core Infrastructure — ✅
+  - Module Registry (`modules/index.ts`, `modules/types.ts`) — Đã có
+  - Remote Config (`services/remote-config/*`, `hooks/use-remote-config.ts`, `stores/remoteConfigStore.ts`) — Đã có
+  - Module Store (`stores/moduleStore.ts`) — Đã có
+
+- Phase 2: UI Component Library — ✅
+  - Glass components (`components/glass/*`) — Đã có
+  - Liquid effects (`components/liquid/*`) — Đã có
+  - AppHeader (`components/layout/AppHeader.tsx`) — Đã có
+  - AppDrawer (`components/layout/AppDrawer.tsx`) — Đã có
+  - Custom Tab Bar (`components/layout/LiquidTabBar.tsx` + variants) — Đã có
+
+- Phase 3: Firebase Functions Architecture — ✅
+  - Structure `functions/src/{core,ai,config}/` và `index.ts` — Đã có
+  - Core: `middleware.ts`, `errors.ts`, `validation.ts` — Đã có
+  - AI: `chat.ts`, `vision.ts`, `speech.ts` — Đã có
+  - Config: `secrets.ts`, `rate-limit.ts` — Đã có
+
+- Phase 4: AI Layer Integration — ✅
+  - Client (`services/ai/client.ts`, `services/ai/types.ts`) — Đã có
+  - Components (`components/ai/*`) — Đã có
+  - Store (`stores/aiStore.ts`) — Đã có
+
+- Phase 5: Navigation & Routing — ⏳ Partial
+  - Tabs layout (`app/(tabs)/_layout.tsx`) — Đã có; cần xác nhận logic tabs động theo `moduleStore`
+  - Module routes — Có skeleton modules nhưng chưa có `app/modules/[name]` routes riêng
+
+- Phase 6: Module Scaffolding — ✅
+  - `modules/{weather,entertainment,management,ai-tools,saas}/index.ts` — Đã có
+
+- Phase 7/8: Dependencies & Setup — ⏳ Partial
+  - Packages: phần lớn đã có trong `package.json` (cần rà lại versions khi build)
+  - Functions setup: `functions/package.json`, `tsconfig.json` — Đã có
+  - App Check/Analytics: trong `services/firebase/*` — Đã có
+  - Dev Tools (ESLint/Prettier/Husky/Sentry/Expo Updates) — Một phần; cần bổ sung nếu yêu cầu
+
+- Documentation — ✅
+  - `docs/architecture.md`, `docs/modules.md`, `docs/functions.md`, `docs/ui-components.md`, `docs/remote-config.md`, `docs/ai-integration.md` — Đã có
+
+- Testing Strategy — ❌ Todo
+  - Chưa thấy unit/integration/e2e tests. Cần bổ sung cấu trúc và test tối thiểu
+
+- Deployment — ⏳ Partial
+  - Functions: có cấu trúc, cần thêm scripts, hướng dẫn rollback, env checklist
+  - App: cần checklist Expo Updates, rollout, A/B flags
+
 ## Kiến trúc tổng quan
 
 ### 1. Project Structure (Mono-Starter)
