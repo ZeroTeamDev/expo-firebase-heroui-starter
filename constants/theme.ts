@@ -51,3 +51,23 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+export const ThemeTokens = {
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+  },
+  radius: {
+    sm: 8,
+    md: 12,
+    lg: 16,
+    pill: 999,
+  },
+  opacity: {
+    glassLight: 0.75,
+    glassDark: 0.6,
+  },
+};
