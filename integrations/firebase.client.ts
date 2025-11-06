@@ -14,6 +14,16 @@ import {
 
 import { Firestore, getFirestore } from "firebase/firestore";
 import { FirebaseStorage, getStorage } from "firebase/storage";
+import {
+  getRemoteConfig,
+  RemoteConfig,
+  fetchAndActivate,
+  getValue,
+  getAll,
+  activate,
+  fetchConfig,
+  isSupported,
+} from "firebase/remote-config";
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -51,6 +61,59 @@ export { auth };
 
 export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
+
+// Initialize Remote Config
+let remoteConfig: RemoteConfig | null = null;
+
+/**
+ * Get Remote Config instance
+ * Initializes Remote Config on first call
+ */
+export function getRemoteConfigInstance(): RemoteConfig {
+  if (!remoteConfig) {
+    try {
+      console.log("[Firebase] Creating Remote Config instance...");
+      remoteConfig = getRemoteConfig(app);
+      console.log("[Firebase] Remote Config instance created successfully");
+
+      // Set default Remote Config settings
+      // For development, use shorter interval
+      const isDev = __DEV__;
+      remoteConfig.settings = {
+        minimumFetchIntervalMillis: isDev ? 0 : 3600000, // 0 for dev (no cache), 1 hour for prod
+        fetchTimeoutMillis: 60000, // 60 seconds
+      };
+      console.log("[Firebase] Remote Config settings configured:", remoteConfig.settings);
+
+      // Note: setDefaults() is not available in Firebase JS SDK for React Native
+      // Default values should be set in Firebase Console
+      // The service will use defaults from Firebase Console or cached values
+      console.log("[Firebase] Remote Config instance ready (defaults should be set in Firebase Console)");
+    } catch (error: any) {
+      console.error("[Firebase] Error creating Remote Config instance:", error);
+      console.error("[Firebase] Error details:", {
+        message: error?.message,
+        code: error?.code,
+        name: error?.name,
+      });
+      throw error;
+    }
+  }
+
+  return remoteConfig;
+}
+
+/**
+ * Check if Remote Config is supported
+ */
+export async function checkRemoteConfigSupport(): Promise<boolean> {
+  try {
+    return await isSupported();
+  } catch (error) {
+    console.error("[Firebase] Remote Config support check failed:", error);
+    return false;
+  }
+}
 
 export const login = async (email: string, password: string) => {
   try {

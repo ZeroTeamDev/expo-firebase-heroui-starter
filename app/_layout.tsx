@@ -4,39 +4,71 @@ import { StatusBar } from "expo-status-bar";
 import { NotifierWrapper } from "react-native-notifier";
 import "react-native-reanimated";
 // gesture
-import { useIsAuthenticated } from "@/stores/authStore";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import "@/app/globals.css";
 
-import AuthProvider, { useAuth } from "@/providers/AuthProvider";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect } from "react";
+import { useModuleStore } from "@/stores/moduleStore";
+import { initRemoteConfig, fetchRemoteConfig } from "@/services/remote-config";
+import { useRemoteConfigStore } from "@/stores/remoteConfigStore";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
-  anchor: "auth",
+  initialRouteName: "(tabs)",
 };
 
 function AppContent() {
-  const { loading } = useAuth();
-  const isAuthenticated = useIsAuthenticated();
+  const initializeModules = useModuleStore((state) => state.initializeModules);
+  const syncModulesWithRemoteConfig = useModuleStore(
+    (state) => state.syncModulesWithRemoteConfig
+  );
+  const updateFlags = useRemoteConfigStore((state) => state.updateFlags);
 
   useEffect(() => {
-    if (!loading) {
-      // Hide the splash screen when authentication is loaded
-      SplashScreen.hideAsync();
-    }
-  }, [loading]);
+    let isMounted = true;
 
-  // Show nothing while authentication is loading
-  if (loading) {
-    return null;
-  }
+    const initializeApp = async () => {
+      try {
+        // Initialize Remote Config
+        await initRemoteConfig();
+
+        // Fetch Remote Config values
+        const featureFlags = await fetchRemoteConfig();
+        
+        if (!isMounted) return;
+        updateFlags(featureFlags);
+
+        // Initialize modules from registry
+        initializeModules();
+
+        // Sync modules with Remote Config feature flags
+        syncModulesWithRemoteConfig(featureFlags);
+
+        // Hide the splash screen
+        SplashScreen.hideAsync();
+      } catch (error) {
+        console.error("[AppContent] Initialization error:", error);
+        if (!isMounted) return;
+        // Even if Remote Config fails, still initialize modules
+        initializeModules();
+    SplashScreen.hideAsync();
+      }
+    };
+
+    initializeApp();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   return (
     <Stack
@@ -47,14 +79,8 @@ function AppContent() {
         },
       }}
     >
-      <Stack.Protected guard={!isAuthenticated}>
-        <Stack.Screen name="auth" />
-      </Stack.Protected>
-
-      <Stack.Protected guard={isAuthenticated}>
-        <Stack.Screen name="(tabs)" />
-      </Stack.Protected>
-      {/* Expo Router includes all routes by default. Adding Stack.Protected creates exceptions for these screens. */}
+      <Stack.Screen name="(tabs)" />
+      {/* Expo Router includes all routes by default. */}
     </Stack>
   );
 }
@@ -152,15 +178,13 @@ export default function RootLayout() {
             },
           }}
         >
-          <AuthProvider>
-            <GestureHandlerRootView>
-              <NotifierWrapper>
-                <AppContent />
-              </NotifierWrapper>
-            </GestureHandlerRootView>
+          <GestureHandlerRootView>
+            <NotifierWrapper>
+              <AppContent />
+            </NotifierWrapper>
+          </GestureHandlerRootView>
 
-            <StatusBar style="auto" />
-          </AuthProvider>
+          <StatusBar style="auto" />
         </HeroUINativeProvider>
       </KeyboardProvider>
     </SafeAreaProvider>

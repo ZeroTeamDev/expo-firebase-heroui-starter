@@ -1,0 +1,19 @@
+import { ThemeView } from "@/components/theme-view";
+import { useTheme } from "heroui-native";
+import { Text } from "react-native";
+
+export default function RadioScreen() {
+  const { colors } = useTheme();
+
+  return (
+    <ThemeView className="flex-1 items-center justify-center w-full p-4" useSafeArea={false}>
+      <Text style={{ color: colors.foreground }} className="text-3xl font-bold">
+        Radio
+      </Text>
+      <Text style={{ color: colors.mutedForeground }} className="text-lg mt-4">
+        Live radio stations
+      </Text>
+    </ThemeView>
+  );
+}
+
