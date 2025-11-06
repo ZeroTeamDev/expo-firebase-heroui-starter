@@ -5,14 +5,15 @@ import React, { useMemo } from "react";
 import { useModules } from "@/hooks/use-modules";
 import { LiquidTabBar } from "@/components/layout/LiquidTabBar";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { getDefaultModuleIcon } from "@/modules/icon-map";
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const enabledModules = useModules();
 
   // Get icon name for module
-  const getModuleIconName = (module: { icon?: string }): string => {
-    return module.icon || "circle";
+  const getModuleIconName = (module: { id: string; icon?: string }): string => {
+    return module.icon || (getDefaultModuleIcon(module.id as any) as string);
   };
 
   // Track module IDs to avoid unnecessary re-renders
