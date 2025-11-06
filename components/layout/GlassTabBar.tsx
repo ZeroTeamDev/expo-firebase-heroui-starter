@@ -257,11 +257,12 @@ const styles = StyleSheet.create({
   activeTabCircle: {
     position: "absolute",
     width: 60,
-    height: 60,
+    minHeight: 50,
     borderRadius: 30,
     backgroundColor: "white",
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
