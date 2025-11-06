@@ -15,7 +15,7 @@ import {
   Platform,
 } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Animated, {
   useSharedValue,
   withSpring,
@@ -47,8 +47,17 @@ function TabItem({
 }) {
   const scale = useSharedValue(isFocused ? 1 : 0);
   const inactiveOpacity = useSharedValue(isFocused ? 0 : 1);
+  const didMountRef = useRef(false);
 
   useEffect(() => {
+    if (!didMountRef.current) {
+      // Set values immediately on first mount to avoid initial flicker
+      scale.value = isFocused ? 1 : 0;
+      inactiveOpacity.value = isFocused ? 0 : 1;
+      didMountRef.current = true;
+      return;
+    }
+
     scale.value = withSpring(isFocused ? 1 : 0, {
       damping: 18,
       stiffness: 180,
@@ -137,7 +146,7 @@ function TabItem({
         pointerEvents="none"
         style={[styles.activeTabCircle, animatedCircleStyle]}
       >
-        {getIconElement(true, 22, activeIconColor)}
+        {getIconElement(true, 24, activeIconColor)}
         {typeof label === "string" && label.length > 0 && (
           <Text style={[styles.tabLabel, { color: activeIconColor }]}>
             {label}
@@ -177,7 +186,7 @@ export function GlassTabBar({
         { paddingBottom: insets.bottom, height: 50 + bottomPadding },
       ]}
     >
-      {/* Use BlurView for background on all platforms to avoid native artifact */}
+      {/* Outer nav bar background - glass effect */}
       <BlurView
         intensity={30}
         tint={isDark ? "dark" : "light"}
@@ -193,26 +202,53 @@ export function GlassTabBar({
           },
         ]}
       />
-      <View style={styles.tabBarContent}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
-          const onPress = () => handleTabPress(route, isFocused);
-          const onLongPress = () => {
-            navigation.emit({ type: "tabLongPress", target: route.key });
-          };
-          return (
-            <TabItem
-              key={route.key}
-              route={route}
-              options={options}
-              isFocused={isFocused}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              colors={colors}
-            />
-          );
-        })}
+
+      {/* Inner track - capsule container for tabs */}
+      <View style={styles.innerTrack}>
+        {/* Track background - subtle glass effect */}
+        <BlurView
+          intensity={20}
+          tint={isDark ? "dark" : "light"}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              backgroundColor: isDark
+                ? "rgba(50, 50, 50, 0.4)"
+                : "rgba(255, 255, 255, 0.5)",
+              borderWidth: 1,
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.15)"
+                : "rgba(255, 255, 255, 0.6)",
+              borderRadius: 24,
+            },
+          ]}
+        />
+
+        {/* Tab items inside track */}
+        <View style={styles.tabBarContent}>
+          {state.routes.map((route, index) => {
+            const { options } = descriptors[route.key];
+            const isFocused = state.index === index;
+            const onPress = () => handleTabPress(route, isFocused);
+            const onLongPress = () => {
+              navigation.emit({ type: "tabLongPress", target: route.key });
+            };
+            return (
+              <TabItem
+                key={route.key}
+                route={route}
+                options={options}
+                isFocused={isFocused}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                colors={colors}
+              />
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -230,13 +266,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  innerTrack: {
+    height: 56,
+    borderRadius: 24,
+    overflow: "hidden",
+    position: "relative",
   },
   tabBarContent: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingTop: 10,
   },
   tabItemContainer: {
     flex: 1,
