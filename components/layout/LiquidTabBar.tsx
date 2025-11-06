@@ -1,7 +1,9 @@
 // Created by Kien AI (leejungkiin@gmail.com)
 import React from 'react';
-import { View } from 'react-native';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { GlassTabBar } from './GlassTabBar';
 
-export function LiquidTabBar() {
-  return <View style={{ height: 56 }} />;
+// Standardize LiquidTabBar to delegate to the improved GlassTabBar implementation
+export function LiquidTabBar(props: BottomTabBarProps) {
+  return <GlassTabBar {...props} />;
 }

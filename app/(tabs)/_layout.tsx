@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import { colorKit, useTheme } from "heroui-native";
 import React, { useMemo } from "react";
 import { useModules } from "@/hooks/use-modules";
-import { GlassTabBar } from "@/components/layout/GlassTabBar";
+import { LiquidTabBar } from "@/components/layout/LiquidTabBar";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 export default function TabLayout() {
@@ -53,7 +53,7 @@ export default function TabLayout() {
   if (enabledModules.length === 0) {
     return (
       <Tabs
-        tabBar={(props) => <GlassTabBar {...props} />}
+        tabBar={(props) => <LiquidTabBar {...props} />}
         screenOptions={{
           tabBarActiveTintColor: colorKit.HEX(colors.accent),
           tabBarInactiveTintColor: colorKit.HEX(colors.mutedForeground),
@@ -140,7 +140,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <GlassTabBar {...props} />}
+      tabBar={(props) => <LiquidTabBar {...props} />}
       screenOptions={{
         tabBarActiveTintColor: colorKit.HEX(colors.accent),
         tabBarInactiveTintColor: colorKit.HEX(colors.mutedForeground),
