@@ -1,58 +1,16 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Tabs } from "expo-router";
 import { colorKit, useTheme } from "heroui-native";
-import React, { useMemo } from "react";
-import { useModules } from "@/hooks/use-modules";
+import React from "react";
 import { LiquidTabBar } from "@/components/layout/LiquidTabBar";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { getDefaultModuleIcon } from "@/modules/icon-map";
+// modules are now showcased inside screens, tabs are static
 
 export default function TabLayout() {
   const { colors } = useTheme();
-  const enabledModules = useModules();
 
-  // Get icon name for module
-  const getModuleIconName = (module: { id: string; icon?: string }): string => {
-    return module.icon || (getDefaultModuleIcon(module.id as any) as string);
-  };
-
-  // Track module IDs to avoid unnecessary re-renders
-  const moduleIds = useMemo(
-    () => enabledModules.map((m) => m.id).join(","),
-    [enabledModules]
-  );
-
-  // Generate tab screens from enabled modules
-  // Only recalculate when module IDs change
-  const moduleTabScreens = useMemo(() => {
-    return enabledModules.flatMap((module) => {
-      const iconName = getModuleIconName(module);
-      // Create a tab for the first route of each module
-      // In a full implementation, you might want to create tabs for all routes
-      const firstRoute = module.routes[0];
-      if (!firstRoute) return [];
-
-      return (
-        <Tabs.Screen
-          name={firstRoute.path as any}
-          key={module.id}
-          options={{
-            title: module.title,
-            tabBarIcon: ({ color, size }) => (
-              <IconSymbol size={size} name={iconName as any} color={color} />
-            ),
-            headerShown: true,
-            header: () => <AppHeader title={module.title} />,
-          }}
-        />
-      );
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleIds]);
-
-  // Fallback to default tabs if no modules enabled - Create 5 tabs like the image
-  if (enabledModules.length === 0) {
-    return (
+  // Always render static tabs; modules are accessed within screens
+  return (
       <Tabs
         tabBar={(props) => <LiquidTabBar {...props} />}
         screenOptions={{
@@ -136,30 +94,5 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    );
-  }
-
-  return (
-    <Tabs
-      tabBar={(props) => <LiquidTabBar {...props} />}
-      screenOptions={{
-        tabBarActiveTintColor: colorKit.HEX(colors.accent),
-        tabBarInactiveTintColor: colorKit.HEX(colors.mutedForeground),
-        headerShown: false,
-        headerStyle: {
-          backgroundColor: "transparent",
-        },
-        headerTransparent: true,
-        // These styles are no longer needed as GlassTabBar handles its own styling.
-        // Keeping them will cause layout conflicts.
-        tabBarStyle: {
-          backgroundColor: "transparent",
-          borderTopWidth: 0,
-          elevation: 0,
-        },
-      }}
-    >
-      {moduleTabScreens}
-    </Tabs>
   );
 }
