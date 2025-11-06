@@ -14,3 +14,11 @@ export function getModule(id: ModuleId): ModuleDefinition | undefined {
 export function listModules(): ModuleDefinition[] {
   return Array.from(registry.values());
 }
+
+// Side-effect imports to register built-in modules
+// These imports call registerModule(...) in each file on load
+import './weather';
+import './entertainment';
+import './management';
+import './ai-tools';
+import './saas';
