@@ -1,11 +1,12 @@
-/**
- * SaaS Module
- * Created by Kien AI (leejungkiin@gmail.com)
- *
- * Placeholder module definition - to be implemented later
- */
+// Created by Kien AI (leejungkiin@gmail.com)
+import { registerModule } from '..';
+import type { ModuleDefinition } from '../types';
 
-export const saasModule = {
-  // Module definition will be added in later steps
+const saasModule: ModuleDefinition = {
+  id: 'saas',
+  title: 'SaaS',
+  routes: [{ path: '/modules/saas', title: 'SaaS Utilities' }],
 };
 
+registerModule(saasModule);
+export default saasModule;

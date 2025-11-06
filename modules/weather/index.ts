@@ -1,11 +1,12 @@
-/**
- * Weather Module
- * Created by Kien AI (leejungkiin@gmail.com)
- *
- * Placeholder module definition - to be implemented later
- */
+// Created by Kien AI (leejungkiin@gmail.com)
+import { registerModule } from '..';
+import type { ModuleDefinition } from '../types';
 
-export const weatherModule = {
-  // Module definition will be added in later steps
+const weatherModule: ModuleDefinition = {
+  id: 'weather',
+  title: 'Weather',
+  routes: [{ path: '/modules/weather', title: 'Weather Home' }],
 };
 
+registerModule(weatherModule);
+export default weatherModule;

@@ -1,11 +1,12 @@
-/**
- * AI Tools Module
- * Created by Kien AI (leejungkiin@gmail.com)
- *
- * Placeholder module definition - to be implemented later
- */
+// Created by Kien AI (leejungkiin@gmail.com)
+import { registerModule } from '..';
+import type { ModuleDefinition } from '../types';
 
-export const aiToolsModule = {
-  // Module definition will be added in later steps
+const aiToolsModule: ModuleDefinition = {
+  id: 'ai-tools',
+  title: 'AI Tools',
+  routes: [{ path: '/modules/ai-tools', title: 'AI Tools' }],
 };
 
+registerModule(aiToolsModule);
+export default aiToolsModule;

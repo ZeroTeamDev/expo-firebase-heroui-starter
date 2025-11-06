@@ -1,11 +1,12 @@
-/**
- * Entertainment Module
- * Created by Kien AI (leejungkiin@gmail.com)
- *
- * Placeholder module definition - to be implemented later
- */
+// Created by Kien AI (leejungkiin@gmail.com)
+import { registerModule } from '..';
+import type { ModuleDefinition } from '../types';
 
-export const entertainmentModule = {
-  // Module definition will be added in later steps
+const entertainmentModule: ModuleDefinition = {
+  id: 'entertainment',
+  title: 'Entertainment',
+  routes: [{ path: '/modules/entertainment', title: 'Entertainment Home' }],
 };
 
+registerModule(entertainmentModule);
+export default entertainmentModule;
