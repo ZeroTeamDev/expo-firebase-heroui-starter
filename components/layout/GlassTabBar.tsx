@@ -7,13 +7,7 @@
  */
 
 import { useTheme } from "heroui-native";
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Text,
-  Platform,
-} from "react-native";
+import { View, TouchableOpacity, StyleSheet, Text } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useEffect, useRef } from "react";
 import Animated, {
@@ -24,7 +18,6 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
-import { GlassViewNative } from "@/components/glass/GlassViewNative";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
