@@ -2,6 +2,10 @@ import { ThemeView } from "@/components/theme-view";
 import { Button, useTheme } from "heroui-native";
 import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
+import { useModules } from "@/hooks/use-modules";
+import { GlassCard } from "@/components/glass/GlassCard";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { getDefaultModuleIcon } from "@/modules/icon-map";
 
 import { useAuthStore } from "@/stores/authStore";
 
@@ -9,6 +13,7 @@ export default function MyComponent() {
   const { toggleTheme, colors } = useTheme();
   const { user } = useAuthStore();
   const router = useRouter();
+  const modules = useModules();
 
   const openLink = (url: string) => {
     Linking.openURL(url);
@@ -44,10 +49,35 @@ export default function MyComponent() {
           Let's Explore, {user?.displayName || "User"}
         </Text>
 
-        <View className="mb-6">
-          <Button variant="primary" onPress={() => router.push('/modules' as any)}>
-            Browse Modules
-          </Button>
+        {/* Modules section inline */}
+        <View className="mb-8">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text style={{ color: colors.foreground }} className="text-xl font-semibold">
+              Modules
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/modules' as any)}>
+              <Text style={{ color: colors.accent }}>See all →</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            {modules.map((m) => {
+              const iconName = (m.icon as any) || (getDefaultModuleIcon(m.id as any) as any);
+              return (
+                <TouchableOpacity key={m.id} onPress={() => router.push(`/modules/${m.id}` as any)} activeOpacity={0.9}>
+                  <GlassCard style={{ width: 160, height: 120, justifyContent: 'center' }}>
+                    <View style={{ gap: 10, alignItems: 'flex-start' }}>
+                      <IconSymbol name={iconName} color={colors.accent} size={28} />
+                      <Text style={{ color: colors.foreground, fontWeight: '600' }}>{m.title}</Text>
+                      <Text style={{ color: colors.mutedForeground, fontSize: 12 }} numberOfLines={1}>
+                        {m.routes?.[0]?.title || 'Open'}
+                      </Text>
+                    </View>
+                  </GlassCard>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View className="flex-1 mb-8">
