@@ -1,12 +1,14 @@
 import { ThemeView } from "@/components/theme-view";
 import { Button, useTheme } from "heroui-native";
 import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
 
 import { useAuthStore } from "@/stores/authStore";
 
 export default function MyComponent() {
   const { toggleTheme, colors } = useTheme();
   const { user } = useAuthStore();
+  const router = useRouter();
 
   const openLink = (url: string) => {
     Linking.openURL(url);
@@ -41,6 +43,12 @@ export default function MyComponent() {
         <Text style={{ color: colors.foreground }} className="text-3xl font-bold mb-8">
           Let's Explore, {user?.displayName || "User"}
         </Text>
+
+        <View className="mb-6">
+          <Button variant="primary" onPress={() => router.push('/modules' as any)}>
+            Browse Modules
+          </Button>
+        </View>
 
         <View className="flex-1 mb-8">
           <Text style={{ color: colors.foreground }} className="text-xl font-semibold mb-4">
