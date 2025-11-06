@@ -1,5 +1,4 @@
 // Created by Kien AI (leejungkiin@gmail.com)
-import { registerModule } from '..';
 import type { ModuleDefinition } from '../types';
 
 const managementModule: ModuleDefinition = {
@@ -8,5 +7,4 @@ const managementModule: ModuleDefinition = {
   routes: [{ path: '/modules/management', title: 'Management Home' }],
 };
 
-registerModule(managementModule);
 export default managementModule;

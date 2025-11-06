@@ -1,5 +1,4 @@
 // Created by Kien AI (leejungkiin@gmail.com)
-import { registerModule } from '..';
 import type { ModuleDefinition } from '../types';
 
 const entertainmentModule: ModuleDefinition = {
@@ -8,5 +7,4 @@ const entertainmentModule: ModuleDefinition = {
   routes: [{ path: '/modules/entertainment', title: 'Entertainment Home' }],
 };
 
-registerModule(entertainmentModule);
 export default entertainmentModule;
