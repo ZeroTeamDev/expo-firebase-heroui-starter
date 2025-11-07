@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { NotifierWrapper } from "react-native-notifier";
@@ -15,13 +15,14 @@ import { useEffect } from "react";
 import { useModuleStore } from "@/stores/moduleStore";
 import { initRemoteConfig, fetchRemoteConfig } from "@/services/remote-config";
 import { useRemoteConfigStore } from "@/stores/remoteConfigStore";
+import { getFirebaseApp } from "@/integrations/firebase.client";
+import AuthProvider, { useAuth } from "@/providers/AuthProvider";
+import { isLoginRequired } from "@/utils/auth";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export const unstable_settings = {
-  initialRouteName: "(tabs)",
-};
+export const unstable_settings = {} as const;
 
 function AppContent() {
   const initializeModules = useModuleStore((state) => state.initializeModules);
@@ -35,6 +36,10 @@ function AppContent() {
 
     const initializeApp = async () => {
       try {
+        // Initialize Firebase Web SDK first (needed for Firestore, Auth, etc.)
+        // This ensures Firebase is ready before other services try to use it
+        getFirebaseApp();
+        
         // Initialize Remote Config
         await initRemoteConfig();
 
@@ -70,17 +75,53 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
+  const { user, loading } = useAuth();
+  const loginRequired = isLoginRequired();
+
+  // If user is already logged in, redirect to home immediately
+  // This ensures users with persisted sessions go straight to the app
+  if (user) {
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    );
+  }
+
+  // If login is not required, allow access to main app without authentication
+  if (!loginRequired) {
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    );
+  }
+
+  // While auth state is resolving and login is required, keep stack minimal
+  // Only show loading when we don't have a user and login is required
+  if (loading) {
+    return <Stack screenOptions={{ headerShown: false }} />;
+  }
+
+  // User is not logged in and login is required - show auth screens
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: {
-          backgroundColor: "transparent", // Let theme handle the background
-        },
+        contentStyle: { backgroundColor: 'transparent' },
       }}
     >
-      <Stack.Screen name="(tabs)" />
-      {/* Expo Router includes all routes by default. */}
+      <Stack.Screen name="auth" />
     </Stack>
   );
 }
@@ -180,7 +221,9 @@ export default function RootLayout() {
         >
           <GestureHandlerRootView>
             <NotifierWrapper>
-              <AppContent />
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
             </NotifierWrapper>
           </GestureHandlerRootView>
 

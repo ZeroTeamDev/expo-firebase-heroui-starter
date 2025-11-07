@@ -1,5 +1,5 @@
 // Created by Kien AI (leejungkiin@gmail.com)
-export type ModuleId = 'weather' | 'entertainment' | 'management' | 'ai-tools' | 'saas';
+export type ModuleId = 'weather' | 'entertainment' | 'management' | 'ai-tools' | 'saas' | 'database-example' | 'analytics-example' | 'ai-example';
 
 export interface ModuleRoute {
   path: string;

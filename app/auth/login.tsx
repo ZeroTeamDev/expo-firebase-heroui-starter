@@ -10,6 +10,7 @@ import React, { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { z } from "zod";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 // Zod validation schema
 const loginSchema = z.object({
@@ -223,6 +224,15 @@ export default function Login() {
               </Link>
             </View>
           </View>
+
+          {/* Google Sign-In Button (only renders if configured) */}
+          {Platform.OS === 'ios' 
+            ? !!process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+            : Platform.OS === 'android'
+            ? !!process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
+            : !!process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID ? (
+            <GoogleSignInButton />
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </ThemeView>

@@ -21,9 +21,15 @@ import entertainment from './entertainment';
 import management from './management';
 import aiTools from './ai-tools';
 import saas from './saas';
+import databaseExample from './examples/database-example';
+import analyticsExample from './examples/analytics-example';
+import aiExample from './examples/ai-example';
 
 registerModule(weather);
 registerModule(entertainment);
 registerModule(management);
 registerModule(aiTools);
 registerModule(saas);
+registerModule(databaseExample);
+registerModule(analyticsExample);
+registerModule(aiExample);

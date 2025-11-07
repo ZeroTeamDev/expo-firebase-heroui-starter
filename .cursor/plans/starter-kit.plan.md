@@ -1,478 +1,724 @@
-# Expo AI Starter Kit - Kiến Trúc Mono-Starter
+# Expo AI Starter Kit - Kiến Trúc Mono-Starter với Deep AI & Firebase Integration
 
 ## Mục tiêu
 
-Xây dựng khung cấu trúc tái sử dụng cho mono-starter với module system, Firebase Functions chuẩn, UI components library, và AI layer architecture - không implement chi tiết module mà chỉ thiết kế scaffolding.
+Xây dựng khung cấu trúc tái sử dụng cho mono-starter với:
+- Module system hoàn chỉnh
+- Firebase Functions chuẩn
+- UI components library đầy đủ
+- AI layer architecture tích hợp sâu
+- **Developer-friendly abstraction layer** - Developers chỉ cần import và sử dụng, không cần quan tâm implementation details
+- **Examples cho mọi tính năng** - Mỗi tính năng có ví dụ cụ thể để thể hiện cách hoạt động
 
-## Tiến độ thực hiện (Progress)
+## Core Philosophy: Developer Experience First
 
-- Trạng thái tổng quan (cập nhật: 2025-11-06)
+**Nguyên tắc**: Developers chỉ cần:
+```typescript
+import { useDocument, useAIChat, logEvent } from '@/services';
+// Sử dụng trực tiếp, không cần biết Firebase/AI implementation
+```
+
+Không cần:
+- Setup Firebase manually
+- Handle error cases phức tạp
+- Manage connection states
+- Write boilerplate code
+
+## Tiến độ thực hiện (Progress - Updated 2025-01-XX)
+
+### Trạng thái tổng quan:
   - Phase 1: Core Infrastructure — Done ✅
-  - Phase 2: UI Component Library — Done ✅
-  - Phase 3: Firebase Functions Architecture — Done ✅
-  - Phase 4: AI Layer Integration — Done ✅
-  - Phase 5: Navigation & Routing — Partial ⏳ (tabs động cần rà soát/hoàn thiện)
+- Phase 2: UI Component Library — Partial ⏳ (AppDrawer và AI components chỉ là placeholders)
+- Phase 3: Firebase Functions Architecture — Done ✅ (structure đã có, nhưng functions/package.json thiếu dependencies)
+- Phase 4: AI Layer Integration — Partial ⏳ (client/store đã có, nhưng components chỉ là placeholders)
+- Phase 5: Navigation & Routing — Partial ⏳ (tabs static, chưa động theo moduleStore; module routes chỉ là placeholders)
   - Phase 6: Module Scaffolding — Done ✅
-  - Phase 7/8: Dependencies & Setup — Partial ⏳ (kiểm tra/hardening, CI, optional tools)
+- Phase 7/8: Dependencies & Setup — Partial ⏳ (app dependencies OK, functions dependencies thiếu)
+- **Phase 9: Firebase Database Service Layer — Not Started ❌** (NEW)
+- **Phase 10: Firebase Analytics Deep Integration — Not Started ❌** (NEW)
+- **Phase 11: AI Services Deep Integration — Not Started ❌** (NEW)
+- **Phase 12: UI Components Library với Examples — Not Started ❌** (NEW)
+- **Phase 13: Abstraction Layer & Developer Experience — Not Started ❌** (NEW)
+- **Phase 14: Documentation & Developer Guides — Not Started ❌** (NEW)
   - Documentation — Done ✅
-  - Testing Strategy — Todo ❌
-  - Deployment — Partial ⏳ (scripts/rollback/checklist)
+- Testing Strategy — Partial ⏳ (chỉ có 2 test files cơ bản)
+- Deployment — Not Started ❌ (chưa có scripts, rollback procedures, checklist)
 
-### Chi tiết theo hạng mục
+## Enhanced Implementation Plan
 
-- Phase 1: Core Infrastructure — ✅
-  - Module Registry (`modules/index.ts`, `modules/types.ts`) — Đã có
-  - Remote Config (`services/remote-config/*`, `hooks/use-remote-config.ts`, `stores/remoteConfigStore.ts`) — Đã có
-  - Module Store (`stores/moduleStore.ts`) — Đã có
+### Phase 9: Firebase Database Service Layer (NEW - Priority 1)
 
-- Phase 2: UI Component Library — ✅
-  - Glass components (`components/glass/*`) — Đã có
-  - Liquid effects (`components/liquid/*`) — Đã có
-  - AppHeader (`components/layout/AppHeader.tsx`) — Đã có
-  - AppDrawer (`components/layout/AppDrawer.tsx`) — Đã có
-  - Custom Tab Bar (`components/layout/LiquidTabBar.tsx` + variants) — Đã có
+#### 9.1 Firestore Integration với Abstraction Layer
 
-- Phase 3: Firebase Functions Architecture — ✅
-  - Structure `functions/src/{core,ai,config}/` và `index.ts` — Đã có
-  - Core: `middleware.ts`, `errors.ts`, `validation.ts` — Đã có
-  - AI: `chat.ts`, `vision.ts`, `speech.ts` — Đã có
-  - Config: `secrets.ts`, `rate-limit.ts` — Đã có
+**Service Layer**: `services/firebase/database.ts`
+- **CRUD Operations Abstraction**:
+  ```typescript
+  // Developers chỉ cần:
+  const { data, loading, error } = useDocument<User>('users/user123');
+  const { mutate } = useMutation<User>('users/user123');
+  mutate({ name: 'John' }); // Auto handles all Firebase complexity
+  ```
+- **Real-time Listeners** với auto-cleanup
+- **Query Builders** với type safety
+- **Batch Operations** abstraction
+- **Transaction Support** với retry logic
+- **Offline Persistence** handling tự động
+- **Error Handling** tự động với retry
 
-- Phase 4: AI Layer Integration — ✅
-  - Client (`services/ai/client.ts`, `services/ai/types.ts`) — Đã có
-  - Components (`components/ai/*`) — Đã có
-  - Store (`stores/aiStore.ts`) — Đã có
+**Hooks**: `hooks/use-firestore.ts`
+- `useDocument<T>(path, options?)` - Single document với real-time updates
+- `useCollection<T>(path, query?, options?)` - Collection với real-time updates
+- `useQuery<T>(path, filters?, options?)` - Advanced queries với filters
+- `useMutation<T>(path, options?)` - Create/Update/Delete operations
+- `useBatch()` - Batch operations
+- `useTransaction()` - Transaction operations
+- Auto error handling và loading states
+- Auto retry on network errors
+- Optimistic updates support
 
-- Phase 5: Navigation & Routing — ⏳ Partial
-  - Tabs layout (`app/(tabs)/_layout.tsx`) — Đã có; cần xác nhận logic tabs động theo `moduleStore`
-  - Module routes — Có skeleton modules nhưng chưa có `app/modules/[name]` routes riêng
+**Store**: `stores/databaseStore.ts`
+- Cache management tự động
+- Offline data sync
+- Optimistic updates queue
+- Conflict resolution
 
-- Phase 6: Module Scaffolding — ✅
-  - `modules/{weather,entertainment,management,ai-tools,saas}/index.ts` — Đã có
+**Examples**: `modules/examples/database-example/`
+- `app/modules/examples/database-example/index.tsx` - Full example screen
+- CRUD operations example
+- Real-time updates example
+- Query examples với filters
+- Batch operations example
+- Transaction example
+- Offline sync example
 
-- Phase 7/8: Dependencies & Setup — ⏳ Partial
-  - Packages: phần lớn đã có trong `package.json` (cần rà lại versions khi build)
-  - Functions setup: `functions/package.json`, `tsconfig.json` — Đã có
-  - App Check/Analytics: trong `services/firebase/*` — Đã có
-  - Dev Tools (ESLint/Prettier/Husky/Sentry/Expo Updates) — Một phần; cần bổ sung nếu yêu cầu
+**Documentation**: `docs/database-integration.md`
+- Quick start guide (5 minutes)
+- API reference
+- Best practices
+- Common patterns
+- Error handling guide
 
-- Documentation — ✅
-  - `docs/architecture.md`, `docs/modules.md`, `docs/functions.md`, `docs/ui-components.md`, `docs/remote-config.md`, `docs/ai-integration.md` — Đã có
+#### 9.2 Realtime Database Integration (Optional)
 
-- Testing Strategy — ❌ Todo
-  - Chưa thấy unit/integration/e2e tests. Cần bổ sung cấu trúc và test tối thiểu
+**Service**: `services/firebase/realtime-database.ts`
+- Similar abstraction như Firestore
+- Real-time sync support
+- Unified interface với Firestore
 
-- Deployment — ⏳ Partial
-  - Functions: có cấu trúc, cần thêm scripts, hướng dẫn rollback, env checklist
-  - App: cần checklist Expo Updates, rollout, A/B flags
+### Phase 10: Firebase Analytics Deep Integration (NEW - Priority 1)
 
-## Kiến trúc tổng quan
+#### 10.1 Analytics Service Enhancement
 
-### 1. Project Structure (Mono-Starter)
+**Service**: `services/firebase/analytics.ts` (enhance existing)
+- **Screen Tracking** với auto-navigation detection
+- **Event Tracking** với type-safe events
+- **User Properties** management
+- **Conversion Tracking**
+- **E-commerce Tracking**
+- **Custom Dimensions**
+- **Privacy Compliance** (GDPR, CCPA) - Auto opt-out handling
 
-```
-expo-firebase-heroui-starter/
-├── app/                          # Expo Router screens
-│   ├── (tabs)/                   # Dynamic tabs based on modules
-│   │   ├── _layout.tsx           # Tab navigation với module filtering
-│   │   └── index.tsx             # Home dashboard
-│   ├── modules/                  # Module routes (dynamic)
-│   │   ├── weather/              # Weather module (nếu enabled)
-│   │   ├── entertainment/        # Entertainment module
-│   │   ├── management/           # Task/Management module
-│   │   ├── ai-tools/             # AI Tools module
-│   │   └── saas/                 # SaaS utilities module
-│   ├── auth/                     # Existing auth flow
-│   └── _layout.tsx               # Root layout với Remote Config
-├── modules/                      # Module definitions & exports
-│   ├── index.ts                  # Module registry & feature flags
-│   ├── types.ts                  # Module interface definitions
-│   ├── weather/                  # Weather module package
-│   │   ├── index.ts              # Module export
-│   │   ├── components/           # Module-specific components
-│   │   ├── screens/              # Module screens
-│   │   ├── hooks/                # Module hooks
-│   │   └── services/             # Module services
-│   ├── entertainment/
-│   ├── management/
-│   ├── ai-tools/
-│   └── saas/
-├── components/                   # Shared UI components
-│   ├── layout/
-│   │   ├── AppHeader.tsx         # Standard header component
-│   │   ├── AppDrawer.tsx         # Side drawer navigation
-│   │   └── LiquidTabBar.tsx      # Custom tab bar với liquid blob
-│   ├── glass/
-│   │   ├── GlassPanel.tsx        # Reusable glass panel wrapper
-│   │   ├── GlassCard.tsx         # Glass card component
-│   │   └── GlassModal.tsx        # Glass modal overlay
-│   ├── liquid/
-│   │   ├── LiquidBlob.tsx        # Skia liquid blob animation
-│   │   └── LiquidBackground.tsx  # Background liquid effect
-│   ├── ai/
-│   │   ├── AIChip.tsx            # Voice input chip với waveform
-│   │   ├── AIPrompt.tsx          # AI prompt input component
-│   │   └── AIStreaming.tsx       # Streaming response display
-│   └── common/                    # Common reusable components
-├── services/                     # Core services
-│   ├── remote-config/            # Remote Config service
-│   │   ├── index.ts              # Remote Config client
-│   │   └── types.ts               # Feature flags types
-│   ├── firebase/
-│   │   ├── functions.ts          # Firebase Functions client
-│   │   ├── app-check.ts          # App Check setup
-│   │   └── analytics.ts          # Analytics wrapper
-│   └── ai/                       # AI service layer
-│       ├── client.ts             # AI Functions client
-│       └── types.ts              # AI request/response types
-├── hooks/                        # Shared hooks
-│   ├── use-remote-config.ts      # Remote Config hook
-│   ├── use-modules.ts            # Module registry hook
-│   └── use-ai.ts                 # AI service hook
-├── stores/                       # Zustand stores
-│   ├── moduleStore.ts            # Active modules state
-│   ├── remoteConfigStore.ts      # Remote Config cache
-│   └── aiStore.ts                # AI conversation state
-├── functions/                    # Firebase Functions (separate repo/path)
-│   ├── src/
-│   │   ├── index.ts              # Functions entry point
-│   │   ├── core/                 # Core reusable functions
-│   │   │   ├── middleware.ts     # Common middleware (auth, rate-limit, etc.)
-│   │   │   ├── errors.ts         # Error handling utilities
-│   │   │   └── validation.ts     # Request validation helpers
-│   │   ├── ai/                   # AI Functions
-│   │   │   ├── chat.ts           # Text chat endpoint
-│   │   │   ├── vision.ts         # Vision/image analysis
-│   │   │   └── speech.ts         # Speech-to-text (Whisper)
-│   │   ├── modules/              # Module-specific functions
-│   │   │   ├── weather.ts        # Weather data aggregation
-│   │   │   └── [module-name].ts  # Other modules
-│   │   └── config/               # Configuration
-│   │       ├── secrets.ts        # Environment secrets
-│   │       └── rate-limit.ts     # Rate limiting config
-│   ├── package.json
-│   └── .env.example
-└── integrations/                # External integrations
-    └── firebase.client.ts        # Existing Firebase client
-```
+**Hooks**: `hooks/use-analytics.ts`
+- `useScreenTracking(screenName, params?)` - Auto track screen views
+- `useEventTracking(eventName, params?)` - Track custom events
+- `useUserProperties(properties)` - Manage user properties
+- `useConversionTracking(conversionType, value?)` - Track conversions
+- `useEcommerceTracking()` - E-commerce tracking helpers
 
-## Implementation Plan
+**Store**: `stores/analyticsStore.ts`
+- Event queue for offline
+- Batch event sending
+- Privacy compliance (GDPR, CCPA)
+- User consent management
 
-### Phase 1: Core Infrastructure & Module System
+**Examples**: `modules/examples/analytics-example/`
+- `app/modules/examples/analytics-example/index.tsx` - Full example screen
+- Screen tracking example
+- Event tracking example
+- User properties example
+- E-commerce tracking example
+- Privacy compliance example
 
-#### 1.1 Module Registry System
+**Documentation**: `docs/analytics-integration.md`
+- Quick start guide
+- Event naming conventions
+- Privacy compliance guide
+- Best practices
 
-- **File**: `modules/index.ts`, `modules/types.ts`
-- **Purpose**: Central registry cho tất cả modules với metadata
-- **Features**:
-  - Module interface definition (route, icon, title, permissions)
-  - Feature flag checking via Remote Config
-  - Dynamic module loading
-  - Module dependency management
+### Phase 11: AI Services Deep Integration (NEW - Priority 1)
 
-#### 1.2 Remote Config Integration
+#### 11.1 AI Service Layer Enhancement
 
-- **Files**: `services/remote-config/`, `hooks/use-remote-config.ts`, `stores/remoteConfigStore.ts`
-- **Purpose**: Feature flags và dynamic configuration
-- **Features**:
-  - Fetch và cache Remote Config values
-  - Feature flags cho modules (e.g., `module_weather_enabled`)
-  - Theme tokens override
-  - AI rate limits configuration
-  - A/B testing flags
+**Chat Service**: `services/ai/chat.ts` (enhance existing)
+- Conversation management tự động
+- Context management
+- Streaming với auto-reconnect
+- Error recovery tự động
+- Rate limiting handling tự động
+- Token usage tracking
 
-#### 1.3 Module Store & State Management
+**Vision Service**: `services/ai/vision.ts` (enhance existing)
+- Image analysis với type-safe responses
+- OCR với structured output
+- Object detection
+- Image generation
+- Batch image processing
 
-- **File**: `stores/moduleStore.ts`
-- **Purpose**: Quản lý active modules và navigation state
-- **Features**:
-  - Track enabled modules
-  - Module navigation state
-  - Module-specific settings
+**Speech Service**: `services/ai/speech.ts` (enhance existing)
+- Speech-to-text với real-time streaming
+- Text-to-speech với voice selection
+- Voice commands recognition
+- Language detection
 
-### Phase 2: UI Component Library
+**Embeddings Service**: `services/ai/embeddings.ts` (NEW)
+- Text embeddings generation
+- Similarity search
+- Semantic search
+- Vector database integration
 
-#### 2.1 Glass Components (`components/glass/`)
+**Hooks**: `hooks/use-ai.ts` (enhance existing)
+- `useAIChat(conversationId?, options?)` - Chat với conversation management
+- `useAIVision(image, prompt?, options?)` - Image analysis
+- `useAISpeech(audio, options?)` - Speech recognition
+- `useAITTS(text, voice?, options?)` - Text-to-speech
+- `useAIEmbeddings(text, options?)` - Embeddings generation
+- Auto error handling và retry
+- Auto rate limit handling
+- Usage tracking
 
-- **GlassPanel.tsx**: Base glass wrapper với blur + gradient + border
-  - Props: blur intensity, opacity, border radius, gradient colors
-  - Support dark/light theme
-  - Reanimated for smooth transitions
-- **GlassCard.tsx**: Card component với glass effect
-- **GlassModal.tsx**: Modal overlay với glass backdrop
+**Store**: `stores/aiStore.ts` (enhance existing)
+- Conversation history với persistence
+- Context management
+- Rate limit tracking
+- Usage analytics
+- Token usage tracking
 
-#### 2.2 Liquid Effects (`components/liquid/`)
+#### 11.2 AI Components Enhancement
 
-- **LiquidBlob.tsx**: Skia metaballs/blob animation
-  - Configurable blob count, colors, animation speed
-  - Performance optimized với Skia
-- **LiquidBackground.tsx**: Background liquid effect cho screens
-- **LiquidTabBar.tsx**: Custom tab bar với animated blob under active tab
+**AIChip**: `components/ai/AIChip.tsx` (enhance existing)
+- Waveform animation khi recording
+- Voice recording với visual feedback
+- Recording state management
+- Permission handling tự động
+- Error states với retry
 
-#### 2.3 Standard Header (`components/layout/AppHeader.tsx`)
+**AIPrompt**: `components/ai/AIPrompt.tsx` (enhance existing)
+- AI suggestions với autocomplete
+- Context-aware suggestions
+- History navigation
+- Multi-line support
+- Character count
+- Auto-resize
 
-- **Features**:
-  - Screen title (dynamic)
-  - Search bar (command bar style)
-  - Profile avatar với dropdown
-  - Theme toggle button
-  - Glass effect styling
-  - Responsive layout
+**AIStreaming**: `components/ai/AIStreaming.tsx` (enhance existing)
+- Typing animation
+- Markdown rendering
+- Code syntax highlighting
+- Copy to clipboard
+- Regenerate response
+- Stop generation
 
-#### 2.4 Drawer Navigation (`components/layout/AppDrawer.tsx`)
+**AIConversation**: `components/ai/AIConversation.tsx` (NEW)
+- Full conversation UI
+- Message history với scroll
+- Context management UI
+- Export conversation
+- Clear conversation
+- Conversation settings
 
-- **Features**:
-  - Settings navigation
-  - Labs/Experiments section
-  - About/Help
-  - Module shortcuts
-  - Glass panel styling
+**AIVision**: `components/ai/AIVision.tsx` (NEW)
+- Image upload với preview
+- Image analysis results display
+- OCR results với editing
+- Object detection visualization
 
-### Phase 3: Firebase Functions Architecture
+**Examples**: `modules/examples/ai-example/`
+- `app/modules/examples/ai-example/index.tsx` - Full example screen
+- Chat example với full conversation
+- Vision analysis example
+- Speech recognition example
+- Embeddings example
+- Multi-modal AI example
 
-#### 3.1 Functions Core Structure
+**Documentation**: `docs/ai-integration.md` (enhance existing)
+- Quick start guide
+- API reference
+- Best practices
+- Rate limiting guide
+- Cost optimization guide
 
-- **Location**: `functions/src/` (separate directory hoặc monorepo)
-- **Purpose**: Reusable Functions architecture cho các dự án mới
-- **Core Files**:
-  - `core/middleware.ts`: Auth check, rate limiting, error handling
-  - `core/errors.ts`: Standardized error responses
-  - `core/validation.ts`: Request validation helpers
-  - `config/secrets.ts`: Environment secrets management
+### Phase 12: UI Components Library với Examples (NEW - Priority 2)
 
-#### 3.2 AI Functions Endpoints
+#### 12.1 Data Display Components
 
-- **`ai/chat.ts`**: Text chat với streaming support
-  - Input: message, conversation_id, model preference
-  - Output: Streaming SSE response
-  - Rate limiting per user
-- **`ai/vision.ts`**: Image analysis
-  - Input: image_url hoặc base64, prompt
-  - Output: Caption/OCR/analysis
-- **`ai/speech.ts`**: Speech-to-text
-  - Input: audio_url hoặc base64
-  - Output: Transcript
+**DataTable**: `components/data/DataTable.tsx`
+- Table với sorting, filtering, pagination
+- Column customization
+- Row selection
+- Export functionality
+- Responsive design
 
-#### 3.3 Functions Configuration
+**DataList**: `components/data/DataList.tsx`
+- List với pull-to-refresh
+- Infinite scroll
+- Empty states
+- Error states
+- Loading states
 
-- **App Check**: Verify requests từ legitimate app
-- **Rate Limiting**: Per-user và per-IP limits
-- **Secrets Management**: API keys trong Functions environment
-- **CORS**: Configure cho web support
+**DataCard**: `components/data/DataCard.tsx`
+- Card với actions
+- Image support
+- Badge support
+- Glass effect support
 
-### Phase 4: AI Layer Integration
+**DataGrid**: `components/data/DataGrid.tsx`
+- Grid layout
+- Responsive columns
+- Item actions
+- Selection support
 
-#### 4.1 AI Service Client (`services/ai/client.ts`)
+**EmptyState**: `components/data/EmptyState.tsx`
+- Customizable empty state
+- Action buttons
+- Illustrations support
 
-- **Purpose**: Client-side wrapper cho AI Functions
-- **Features**:
-  - Type-safe API calls
-  - Streaming response handling
-  - Error handling và retries
-  - Request queuing
+**ErrorState**: `components/data/ErrorState.tsx`
+- Error display
+- Retry functionality
+- Custom error messages
 
-#### 4.2 AI Components (`components/ai/`)
+#### 12.2 Form Components
 
-- **AIChip.tsx**: Voice input button với waveform animation
-- **AIPrompt.tsx**: Text input với AI suggestions
-- **AIStreaming.tsx**: Display streaming responses với typing animation
+**FormInput**: `components/forms/FormInput.tsx`
+- Input với validation
+- Error messages
+- Helper text
+- Icons support
+- Glass effect support
 
-#### 4.3 AI Store (`stores/aiStore.ts`)
+**FormSelect**: `components/forms/FormSelect.tsx`
+- Select với search
+- Multi-select support
+- Custom options rendering
+- Async data loading
 
-- Conversation history
-- Streaming state
+**FormDatePicker**: `components/forms/FormDatePicker.tsx`
+- Date picker
+- Time picker
+- Range picker
+- Custom date formats
+
+**FormFileUpload**: `components/forms/FormFileUpload.tsx`
+- File upload với preview
+- Multiple files support
+- Progress indicator
+- Drag and drop
+
+**FormSwitch**: `components/forms/FormSwitch.tsx`
+- Switch với label
+- Description support
+- Disabled state
+
+**FormCheckbox**: `components/forms/FormCheckbox.tsx`
+- Checkbox group
+- Custom styling
+- Validation support
+
+**FormRadio**: `components/forms/FormRadio.tsx`
+- Radio group
+- Custom styling
+- Validation support
+
+**FormTextarea**: `components/forms/FormTextarea.tsx`
+- Textarea với character count
+- Auto-resize
+- Validation support
+
+#### 12.3 Navigation Components
+
+**Breadcrumbs**: `components/navigation/Breadcrumbs.tsx`
+- Breadcrumb navigation
+- Custom separators
+- Click handlers
+
+**Pagination**: `components/navigation/Pagination.tsx`
+- Pagination controls
+- Page size selection
+- Jump to page
+
+**Stepper**: `components/navigation/Stepper.tsx`
+- Step indicator
+- Step validation
+- Custom step content
+
+**Tabs**: `components/navigation/Tabs.tsx`
+- Tab navigation
+- Scrollable tabs
+- Badge support
+
+#### 12.4 Feedback Components
+
+**Toast**: `components/feedback/Toast.tsx`
+- Toast notifications
+- Multiple positions
+- Auto-dismiss
+- Action buttons
+
+**Alert**: `components/feedback/Alert.tsx`
+- Alert dialogs
+- Custom actions
+- Icon support
+
+**Progress**: `components/feedback/Progress.tsx`
+- Progress indicators
+- Linear progress
+- Circular progress
+- Determinate/Indeterminate
+
+**Spinner**: `components/feedback/Spinner.tsx`
+- Loading spinners
+- Custom sizes
+- Custom colors
+
+**Badge**: `components/feedback/Badge.tsx`
+- Badge với counts
+- Custom colors
+- Dot variant
+
+#### 12.5 Media Components
+
+**Image**: `components/media/Image.tsx`
+- Image với lazy loading
+- Error handling
+- Placeholder support
+- Zoom support
+
+**Video**: `components/media/Video.tsx`
+- Video player
+- Controls
+- Fullscreen support
+- Playback speed
+
+**Audio**: `components/media/Audio.tsx`
+- Audio player
+- Waveform visualization
+- Playback controls
+
+**ImageGallery**: `components/media/ImageGallery.tsx`
+- Image gallery
+- Zoom support
+- Swipe gestures
+- Thumbnail navigation
+
+#### 12.6 Component Features
+
+Tất cả components đều có:
+- TypeScript types đầy đủ
+- Glass effect support (optional)
+- Dark/light theme support
+- Accessibility (a11y) support
+- Loading states
+- Error states
+- Empty states
+- Responsive design
+- Animation support
+- Haptic feedback support
+
+#### 12.7 Examples & Documentation
+
+**Example Module**: `modules/examples/ui-components-example/`
+- `app/modules/examples/ui-components-example/index.tsx` - Main example screen
+- Tất cả components với live examples
+- Interactive playground
+- Code snippets
+- Copy to clipboard
+
+**Documentation**: `docs/ui-components.md` (enhance existing)
+- Component API reference
+- Usage examples
+- Best practices
+- Accessibility guidelines
+- Theming guide
+
+### Phase 13: Abstraction Layer & Developer Experience (NEW - Priority 1)
+
+#### 13.1 Service Abstractions
+
+**Database Abstraction**: `services/database/index.ts`
+- Unified interface cho Firestore và Realtime Database
+- Auto-select based on config
+- Type-safe operations
+- Single import point:
+  ```typescript
+  import { useDocument, useCollection, useMutation } from '@/services/database';
+  ```
+
+**AI Abstraction**: `services/ai/index.ts`
+- Unified AI service interface
+- Auto-fallback between providers
+- Rate limiting abstraction
+- Single import point:
+  ```typescript
+  import { useAIChat, useAIVision, useAISpeech } from '@/services/ai';
+  ```
+
+**Analytics Abstraction**: `services/analytics/index.ts`
+- Unified analytics interface
+- Support multiple providers (Firebase, Segment, etc.)
+- Privacy-compliant tracking
+- Single import point:
+  ```typescript
+  import { logEvent, logScreen, setUserProperties } from '@/services/analytics';
+  ```
+
+**Unified Service Export**: `services/index.ts`
+- Single import point cho tất cả services:
+  ```typescript
+  import { 
+    useDocument, 
+    useAIChat, 
+    logEvent 
+  } from '@/services';
+  ```
+
+#### 13.2 Hooks Abstractions
+
+**Data Hooks**: `hooks/data/`
+- `useData<T>(source, options?)` - Universal data hook (works with any data source)
+- `useMutation<T>(source, options?)` - Universal mutation hook
+- `useInfiniteQuery<T>(source, options?)` - Infinite scroll support
+- Auto error handling
+- Auto loading states
+- Auto retry logic
+
+**AI Hooks**: `hooks/ai/` (enhance existing)
+- Unified AI hooks với auto-error handling
+- Auto rate limit handling
+- Auto retry logic
+
+**Analytics Hooks**: `hooks/analytics/` (enhance existing)
+- Unified analytics hooks
+- Auto privacy compliance
+- Auto batching
+
+#### 13.3 Developer Tools
+
+**CLI Tools**: `tools/cli/`
+- `tools/cli/generate-module.ts` - Module generator
+- `tools/cli/generate-component.ts` - Component generator
+- `tools/cli/generate-service.ts` - Service generator
+- `tools/cli/generate-screen.ts` - Screen generator
+
+**Dev Tools**: `tools/dev/`
+- `tools/dev/firebase-emulator.ts` - Firebase emulator launcher
+- `tools/dev/database-browser.ts` - Database browser
+- `tools/dev/analytics-debugger.ts` - Analytics debugger
+- `tools/dev/ai-playground.ts` - AI playground
+
+#### 13.4 Examples & Templates
+
+**Starter Templates**: `templates/`
+- `templates/module-template/` - Module starter template
+- `templates/screen-template/` - Screen starter template
+- `templates/component-template/` - Component starter template
+- `templates/service-template/` - Service starter template
+
+**Example Apps**: `examples/`
+- `examples/todo-app/` - Full CRUD app example
+- `examples/chat-app/` - Real-time chat example
+- `examples/ai-assistant/` - AI assistant example
+- `examples/ecommerce/` - E-commerce example với analytics
+
+### Phase 14: Documentation & Developer Guides (NEW - Priority 2)
+
+#### 14.1 Quick Start Guides
+
+**Quick Start**: `docs/quick-start.md`
+- Get started in 5 minutes
+- Installation guide
+- First app setup
+- Basic usage examples
+
+**Adding a Module**: `docs/adding-a-module.md`
+- Step-by-step guide
+- Code examples
+- Best practices
+
+**Using Database**: `docs/using-database.md`
+- Database usage guide
+- CRUD operations
+- Real-time updates
+- Queries
+
+**Using AI**: `docs/using-ai.md`
+- AI usage guide
+- Chat examples
+- Vision examples
+- Speech examples
+
+**Using Analytics**: `docs/using-analytics.md`
+- Analytics usage guide
+- Event tracking
+- Screen tracking
+- User properties
+
+#### 14.2 API Reference
+
+**Database API**: `docs/api/database.md`
+- Complete API reference
+- Type definitions
+- Examples
+
+**AI API**: `docs/api/ai.md`
+- Complete API reference
+- Type definitions
+- Examples
+
+**Analytics API**: `docs/api/analytics.md`
+- Complete API reference
+- Type definitions
+- Examples
+
+**Components API**: `docs/api/components.md`
+- Complete components API reference
+- Props documentation
+- Examples
+
+#### 14.3 Best Practices
+
+**Database Best Practices**: `docs/best-practices/database.md`
+- Data modeling
+- Query optimization
+- Security rules
+- Performance tips
+
+**AI Best Practices**: `docs/best-practices/ai.md`
+- Prompt engineering
+- Cost optimization
+- Rate limiting
 - Error handling
 
-### Phase 5: Navigation & Routing
+**Performance Optimization**: `docs/best-practices/performance.md`
+- Performance tips
+- Optimization techniques
+- Monitoring
 
-#### 5.1 Dynamic Tab Navigation
+**Security Guidelines**: `docs/best-practices/security.md`
+- Security best practices
+- Authentication
+- Authorization
+- Data protection
 
-- **File**: `app/(tabs)/_layout.tsx`
-- **Purpose**: Dynamic tabs dựa trên enabled modules
-- **Implementation**:
-  - Read enabled modules từ moduleStore
-  - Generate tabs dynamically
-  - Support custom tab icons và labels
+## Implementation Priority
 
-#### 5.2 Module Routing
+### Priority 1: Core Services (Weeks 1-2)
+1. Firebase Database Service Layer (Phase 9)
+2. Firebase Analytics Deep Integration (Phase 10)
+3. AI Services Deep Integration (Phase 11)
+4. Abstraction Layer (Phase 13.1, 13.2)
 
-- **File**: `app/modules/[module-name]/`
-- **Purpose**: Module-specific routes
-- **Features**:
-  - Lazy loading modules
-  - Protected routes per module
-  - Module-specific layouts
+### Priority 2: UI & Examples (Weeks 3-4)
+1. UI Components Library (Phase 12)
+2. Examples Modules (Phase 9, 10, 11, 12)
+3. Developer Tools (Phase 13.3)
 
-### Phase 6: Module Scaffolding
+### Priority 3: Documentation (Week 5)
+1. Quick Start Guides (Phase 14.1)
+2. API Reference (Phase 14.2)
+3. Best Practices (Phase 14.3)
 
-#### 6.1 Module Template Structure
-
-Mỗi module trong `modules/[name]/` có:
-
-- `index.ts`: Module definition export
-- `components/`: Module-specific components
-- `screens/`: Module screens
-- `hooks/`: Module hooks
-- `services/`: Module services
-- `types.ts`: Module types
-
-#### 6.2 Example Module Placeholders
-
-- **Weather**: Placeholder với structure
-- **Entertainment**: Placeholder với structure
-- **Management**: Placeholder với structure
-- **AI Tools**: Placeholder với structure
-- **SaaS**: Placeholder với structure
-
-### Phase 8: Additional Dependencies & Setup
-
-#### 7.1 Required Packages
-
-```json
-{
-  "expo-blur": "~14.0.0",
-  "@shopify/react-native-skia": "~1.0.0",
-  "moti": "^0.28.0",
-  "@tanstack/react-query": "^5.0.0",
-  "firebase": "^12.3.0", // Already installed
-  "expo-av": "~15.0.0",
-  "expo-camera": "~17.0.0",
-  "expo-image-picker": "~16.0.0",
-  "expo-image-manipulator": "~13.0.0",
-  "expo-speech": "~13.0.0",
-  "lucide-react-native": "^0.400.0"
-}
-```
-
-#### 7.2 Firebase Functions Setup
-
-- Initialize Functions project
-- Setup TypeScript config
-- Configure deployment scripts
-- Environment variables setup
-- App Check integration
-
-#### 7.3 Development Tools
-
-- ESLint configuration updates
-- Prettier config
-- Husky + lint-staged setup
-- Expo Updates configuration
-- Sentry integration (optional)
+### Priority 4: Polish & Testing (Week 6)
+1. Complete partial implementations (Phase 1-8)
+2. Testing Strategy
+3. Deployment scripts
 
 ## Files to Create/Modify
 
-### New Files (Core Infrastructure)
+### New Files (Database Service)
+- `services/firebase/database.ts` - Firestore service
+- `services/firebase/realtime-database.ts` - Realtime Database service
+- `services/database/index.ts` - Database abstraction
+- `hooks/use-firestore.ts` - Firestore hooks
+- `hooks/data/use-data.ts` - Universal data hook
+- `stores/databaseStore.ts` - Database store
+- `modules/examples/database-example/index.ts` - Database example module
+- `app/modules/examples/database-example/index.tsx` - Database example screen
+- `docs/database-integration.md` - Database documentation
 
-- `modules/index.ts` - Module registry
-- `modules/types.ts` - Module interfaces
-- `services/remote-config/index.ts` - Remote Config client
-- `services/remote-config/types.ts` - Feature flags types
-- `services/firebase/functions.ts` - Functions client
-- `services/firebase/app-check.ts` - App Check setup
-- `services/ai/client.ts` - AI service client
-- `services/ai/types.ts` - AI types
-- `hooks/use-remote-config.ts` - Remote Config hook
-- `hooks/use-modules.ts` - Module registry hook
-- `hooks/use-ai.ts` - AI service hook
-- `stores/moduleStore.ts` - Module state
-- `stores/remoteConfigStore.ts` - Remote Config cache
-- `stores/aiStore.ts` - AI conversation state
+### New Files (Analytics)
+- `services/firebase/analytics.ts` (enhance) - Analytics service
+- `services/analytics/index.ts` - Analytics abstraction
+- `hooks/use-analytics.ts` (enhance) - Analytics hooks
+- `stores/analyticsStore.ts` - Analytics store
+- `modules/examples/analytics-example/index.ts` - Analytics example module
+- `app/modules/examples/analytics-example/index.tsx` - Analytics example screen
+- `docs/analytics-integration.md` - Analytics documentation
+
+### New Files (AI Enhancement)
+- `services/ai/embeddings.ts` - Embeddings service
+- `services/ai/index.ts` - AI abstraction
+- `components/ai/AIConversation.tsx` - Conversation component
+- `components/ai/AIVision.tsx` - Vision component
+- `modules/examples/ai-example/index.ts` - AI example module
+- `app/modules/examples/ai-example/index.tsx` - AI example screen
+- `docs/ai-integration.md` (enhance) - AI documentation
 
 ### New Files (UI Components)
+- `components/data/*` - Data display components
+- `components/forms/*` - Form components
+- `components/navigation/*` - Navigation components
+- `components/feedback/*` - Feedback components
+- `components/media/*` - Media components
+- `modules/examples/ui-components-example/index.ts` - UI components example module
+- `app/modules/examples/ui-components-example/index.tsx` - UI components example screen
+- `docs/ui-components.md` (enhance) - UI components documentation
 
-- `components/layout/AppHeader.tsx` - Standard header
-- `components/layout/AppDrawer.tsx` - Drawer navigation
-- `components/layout/LiquidTabBar.tsx` - Custom tab bar
-- `components/glass/GlassPanel.tsx` - Glass wrapper
-- `components/glass/GlassCard.tsx` - Glass card
-- `components/glass/GlassModal.tsx` - Glass modal
-- `components/liquid/LiquidBlob.tsx` - Skia blob
-- `components/liquid/LiquidBackground.tsx` - Background effect
-- `components/ai/AIChip.tsx` - Voice input chip
-- `components/ai/AIPrompt.tsx` - AI prompt input
-- `components/ai/AIStreaming.tsx` - Streaming display
-
-### New Files (Module Scaffolds)
-
-- `modules/weather/index.ts` - Weather module definition
-- `modules/entertainment/index.ts` - Entertainment module
-- `modules/management/index.ts` - Management module
-- `modules/ai-tools/index.ts` - AI Tools module
-- `modules/saas/index.ts` - SaaS module
-
-### New Files (Firebase Functions)
-
-- `functions/src/index.ts` - Functions entry
-- `functions/src/core/middleware.ts` - Common middleware
-- `functions/src/core/errors.ts` - Error handling
-- `functions/src/core/validation.ts` - Validation
-- `functions/src/ai/chat.ts` - Chat endpoint
-- `functions/src/ai/vision.ts` - Vision endpoint
-- `functions/src/ai/speech.ts` - Speech endpoint
-- `functions/src/config/secrets.ts` - Secrets config
-- `functions/src/config/rate-limit.ts` - Rate limit config
-- `functions/package.json` - Functions dependencies
-- `functions/tsconfig.json` - Functions TypeScript config
-- `functions/.env.example` - Environment template
+### New Files (Developer Experience)
+- `services/index.ts` - Unified service export
+- `tools/cli/*` - CLI tools
+- `tools/dev/*` - Dev tools
+- `templates/*` - Starter templates
+- `examples/*` - Example apps
+- `docs/quick-start.md` - Quick start guide
+- `docs/adding-a-module.md` - Module guide
+- `docs/using-database.md` - Database usage guide
+- `docs/using-ai.md` - AI usage guide
+- `docs/using-analytics.md` - Analytics usage guide
+- `docs/api/*` - API reference
+- `docs/best-practices/*` - Best practices
 
 ### Modified Files
-
-- `app/_layout.tsx` - Add Remote Config initialization
-- `app/(tabs)/_layout.tsx` - Dynamic tabs từ module registry
-- `tailwind.config.js` - Add glass/liquid utilities
+- `services/ai/client.ts` (enhance)
+- `services/ai/chat.ts` (enhance)
+- `services/ai/vision.ts` (enhance)
+- `services/ai/speech.ts` (enhance)
+- `components/ai/AIChip.tsx` (enhance)
+- `components/ai/AIPrompt.tsx` (enhance)
+- `components/ai/AIStreaming.tsx` (enhance)
+- `hooks/use-ai.ts` (enhance)
+- `stores/aiStore.ts` (enhance)
 - `package.json` - Add new dependencies
-- `integrations/firebase.client.ts` - Add Remote Config, App Check
-- `app.json` - Update plugins nếu cần
 
-## Security & Performance
+## Success Criteria
 
-### Security
+### Developer Experience
+- ✅ Developers có thể sử dụng database trong 5 phút
+- ✅ Developers có thể sử dụng AI trong 5 phút
+- ✅ Developers có thể sử dụng analytics trong 5 phút
+- ✅ Tất cả services có examples hoàn chỉnh
+- ✅ Tất cả components có examples hoàn chỉnh
+- ✅ Documentation đầy đủ và dễ hiểu
 
-- App Check integration
-- Rate limiting trong Functions
-- API keys trong Functions environment only
-- User authentication required cho AI endpoints
-- Firestore security rules cho module data
+### Code Quality
+- ✅ Type-safe APIs
+- ✅ Auto error handling
+- ✅ Auto loading states
+- ✅ Auto retry logic
+- ✅ Offline support
+- ✅ Performance optimized
 
-### Performance
-
-- React Query cache cho Remote Config
-- Lazy loading modules
-- Skia animations optimized
-- Image optimization với expo-image
-- Code splitting per module
-
-## Documentation
-
-### Files to Create
-
-- `docs/architecture.md` - Kiến trúc tổng quan
-- `docs/modules.md` - Module development guide
-- `docs/functions.md` - Functions development guide
-- `docs/ui-components.md` - UI components documentation
-- `docs/remote-config.md` - Remote Config setup guide
-- `docs/ai-integration.md` - AI layer documentation
-
-## Testing Strategy
-
-- Unit tests cho module registry
-- Integration tests cho Remote Config
-- Component tests cho UI components
-- Functions tests với emulator
-- E2E tests cho critical flows
-
-## Deployment
-
-### Functions Deployment
-
-- Separate deployment scripts
-- Environment management
-- Version tagging
-- Rollback procedures
-
-### App Deployment
-
-- Expo Updates configuration
-- Feature flag rollout strategy
-- A/B testing setup
+### Testing
+- ✅ Unit tests cho tất cả services
+- ✅ Integration tests cho examples
+- ✅ E2E tests cho critical flows
+- ✅ Component tests cho UI components

@@ -1,4 +1,4 @@
-import { auth } from "@/integrations/firebase.client";
+import { getFirebaseApp, getAuthInstance } from "@/integrations/firebase.client";
 import { useAuthStore } from "@/stores/authStore";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { createContext, ReactNode, useContext, useEffect } from "react";
@@ -20,12 +20,24 @@ function AuthProvider(props: AuthProviderProps) {
   const { user, loading, setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    // Ensure Firebase app and Auth are initialized before subscribing
+    getFirebaseApp();
+
+    const authInstance = getAuthInstance();
+    if (!authInstance) {
+      // Auth not ready; mark not loading to allow auth screens
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(authInstance, (nextUser) => {
+      if (__DEV__) {
+        console.log('[AuthProvider] onAuthStateChanged:', !!nextUser, nextUser?.email);
+      }
+      setUser(nextUser);
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [setUser, setLoading]);
 

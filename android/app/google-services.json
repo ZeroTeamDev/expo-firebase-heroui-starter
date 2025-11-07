@@ -1,0 +1,84 @@
+{
+  "project_info": {
+    "project_number": "488370793252",
+    "firebase_url": "https://superheroes-ee77d-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "superheroes-ee77d",
+    "storage_bucket": "superheroes-ee77d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:488370793252:android:6a35918a3895955c7ea1b1",
+        "android_client_info": {
+          "package_name": "com.documentscan.easyscan.scanimagetopdf"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "488370793252-09pc1hh724kb21b2qtofi2ch2b7su5hs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC131kN0ckN_ulM0VIBwmIVuNBnRp97nas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "488370793252-09pc1hh724kb21b2qtofi2ch2b7su5hs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "488370793252-kho3ulgeh8kh8n4pac148e63dp41apg7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "Quanlycudan.App"
+              }
+            }
+          ]
+        }
+      },
+      "admob_app_id": "ca-app-pub-4803487592471536~2583856841"
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:488370793252:android:81d99d4e4842971d7ea1b1",
+        "android_client_info": {
+          "package_name": "com.quanly.cudan.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "488370793252-09pc1hh724kb21b2qtofi2ch2b7su5hs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC131kN0ckN_ulM0VIBwmIVuNBnRp97nas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "488370793252-09pc1hh724kb21b2qtofi2ch2b7su5hs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "488370793252-kho3ulgeh8kh8n4pac148e63dp41apg7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "Quanlycudan.App"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

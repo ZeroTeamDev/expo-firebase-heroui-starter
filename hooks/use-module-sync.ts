@@ -7,31 +7,28 @@
 
 import { useEffect } from "react";
 import { useModuleStore } from "@/stores/moduleStore";
-import { useRemoteConfigStore } from "@/stores/remoteConfigStore";
 import { useRemoteConfig } from "./use-remote-config";
 
 /**
  * Hook to automatically sync modules with Remote Config feature flags
  * Watches Remote Config changes and updates modules accordingly
- * @param autoFetch - Whether to automatically fetch Remote Config on mount
+ * Note: Remote Config is fetched once during app initialization in _layout.tsx
  */
-export function useModuleSync(autoFetch: boolean = true) {
+export function useModuleSync() {
   const syncModulesWithRemoteConfig = useModuleStore(
     (state) => state.syncModulesWithRemoteConfig
   );
-  const { flags, loading, status } = useRemoteConfig(autoFetch);
+  const flags = useRemoteConfig();
 
   useEffect(() => {
     // Sync modules when feature flags change
-    if (status === "success" && flags) {
-      syncModulesWithRemoteConfig(flags);
+    if (flags) {
+      syncModulesWithRemoteConfig(flags as unknown as Record<string, unknown>);
     }
-  }, [flags, status, syncModulesWithRemoteConfig]);
+  }, [flags, syncModulesWithRemoteConfig]);
 
   return {
-    loading,
-    status,
-    synced: status === "success",
+    synced: flags !== null,
   };
 }
 
