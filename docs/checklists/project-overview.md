@@ -8,14 +8,14 @@ Created by Kien AI (leejungkiin@gmail.com)
 - [x] Completed
 
 ## Core Governance
-- [ ] Maintain `.project-identity` with latest metadata
-- [ ] Keep `Implementation_Status.md` in sync with actual work
+- [~] Maintain `.project-identity` with latest metadata
+- [~] Keep `Implementation_Status.md` in sync with actual work
 - [ ] Update `.cursor/plans/starter-kit.plan.md` after each milestone
-- [ ] Review open git changes before starting a new feature branch
+- [~] Review open git changes before starting a new feature branch
 
 ## Phase 11 — AI Components Enhancement
-- [ ] Finish all tasks in `phase11-ai.md`
-- [ ] Demo updated AI example module with new UX
+- [~] Finish all tasks in `phase11-ai.md`
+- [x] Demo updated AI example module with new UX
 
 ## Phase 12 — UI Components Library
 - [ ] Finish all tasks in `phase12-ui.md`

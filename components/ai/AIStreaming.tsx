@@ -2,10 +2,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -47,6 +49,7 @@ export function AIStreaming({
 }: AIStreamingProps) {
   const [displayedText, setDisplayedText] = useState(text);
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -144,6 +147,25 @@ export function AIStreaming({
     }
   }, [displayedText, onCopy]);
 
+  const handleShare = useCallback(async () => {
+    if (!displayedText) return;
+    try {
+      await Share.share({
+        message: displayedText,
+        title,
+      });
+      setShared(true);
+      await Haptics.selectionAsync();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setTimeout(() => setShared(false), 2000);
+    } catch (error: any) {
+      if (__DEV__) {
+        console.warn('[AIStreaming] Share failed', error);
+      }
+      Alert.alert('Unable to share', 'We could not open the share sheet. Please try again.');
+    }
+  }, [displayedText, title]);
+
   const handleRegenerate = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onRegenerate?.();
@@ -154,7 +176,7 @@ export function AIStreaming({
     onStop?.();
   }, [onStop]);
 
-  const markdownRules = useMemo(() => ({
+  const markdownStyles = useMemo(() => ({
     body: {
       color: '#e2e8f0',
       fontSize: 16,
@@ -189,6 +211,10 @@ export function AIStreaming({
             <Text style={styles.actionLabel}>{copied ? 'Copied' : 'Copy'}</Text>
           </Pressable>
 
+          <Pressable onPress={handleShare} style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}>
+            <Text style={styles.actionLabel}>{shared ? 'Shared' : 'Share'}</Text>
+          </Pressable>
+
           <Pressable onPress={handleRegenerate} style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}>
             <Text style={styles.actionLabel}>Regenerate</Text>
           </Pressable>
@@ -208,7 +234,7 @@ export function AIStreaming({
         showsVerticalScrollIndicator={false}
       >
         {displayedText ? (
-          <Markdown style={markdownRules}>{displayedText}</Markdown>
+          <Markdown style={markdownStyles}>{displayedText}</Markdown>
         ) : isStreaming ? (
           <View style={styles.streamingPlaceholder}>
             <ActivityIndicator color="#cbd5f5" />
