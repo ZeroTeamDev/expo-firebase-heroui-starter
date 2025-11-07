@@ -5,7 +5,7 @@
  * Enhanced React hooks for AI operations with conversation management
  */
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { streamChat, chat, analyzeImage } from '../services/ai/client';
 import { analyzeDocument, analyzeAudio, analyzeVideo } from '../services/ai/document-client';
 import { useAIStore } from '../stores/aiStore';
@@ -49,19 +49,36 @@ export function useAIChat(conversationId?: string, options?: AIHookOptions) {
   
   // Get messages from the conversation - this will update when conversations Map updates
   const conversation = convId ? conversations.get(convId) : null;
-  const messages = conversation?.messages || [];
+  
+  // Memoize messages to prevent unnecessary re-renders and log spam
+  // Only create new array reference when conversation messages actually change
+  const messages = useMemo(() => {
+    return conversation?.messages || [];
+  }, [conversation?.messages]);
   
   // Get store actions (these don't need to trigger re-renders)
   const { addConversation, addMessage, updateMessage } = useAIStore();
   
-  // Debug: Log when conversations Map or messages change
+  // Track previous messages to only log when content actually changes
+  const prevMessagesRef = useRef<string>('');
+  
+  // Debug: Log when messages actually change (not on every render)
   useEffect(() => {
     if (__DEV__) {
-      console.log('[useAIChat] Messages updated:', {
-        convId,
-        messagesCount: messages.length,
-        messageContents: messages.map(m => ({ role: m.role, contentLength: m.content?.length || 0 })),
-      });
+      // Create a stable key from messages to detect actual changes
+      const messagesKey = JSON.stringify(
+        messages.map(m => ({ id: m.id, role: m.role, contentLength: m.content?.length || 0 }))
+      );
+      
+      // Only log if messages actually changed
+      if (prevMessagesRef.current !== messagesKey) {
+        console.log('[useAIChat] Messages updated:', {
+          convId,
+          messagesCount: messages.length,
+          messageContents: messages.map(m => ({ role: m.role, contentLength: m.content?.length || 0 })),
+        });
+        prevMessagesRef.current = messagesKey;
+      }
     }
   }, [messages, convId]);
 

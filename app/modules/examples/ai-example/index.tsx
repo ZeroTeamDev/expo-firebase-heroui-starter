@@ -11,83 +11,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Card, useTheme } from 'heroui-native';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { FormInput } from '@/components/forms/FormInput';
 import { FormButton } from '@/components/forms/FormButton';
-import { useAIChat, useAIVision, useAIDocument, useAIAudio, useAIVideo } from '@/hooks/use-ai';
+import { useAIChat, useAIDocument, useAIAudio, useAIVideo } from '@/hooks/use-ai';
+import { AIChip } from '@/components/ai/AIChip';
+import { AIConversation } from '@/components/ai/AIConversation';
+import { AIVision } from '@/components/ai/AIVision';
 import { Platform } from 'react-native';
-
-// Cache for image picker module
-let _imagePickerModule: any = null;
-let _imagePickerChecked = false;
-
-// Helper function to safely require image picker module
-// Use same approach as document picker
-function getImagePicker() {
-  if (Platform.OS === 'web') return null;
-  
-  // Return cached result if already checked
-  if (_imagePickerChecked) {
-    return _imagePickerModule;
-  }
-  
-  _imagePickerChecked = true;
-  
-  // Use a more defensive approach to check if module exists
-  // Suppress console errors temporarily to avoid error spam
-  const originalError = console.error;
-  const originalWarn = console.warn;
-  
-  try {
-    // Temporarily suppress console errors/warnings during require
-    console.error = () => {};
-    console.warn = () => {};
-    
-    try {
-      // Try to require the module directly - same as document picker
-      const module = require('expo-image-picker');
-      
-      // Restore console functions
-      console.error = originalError;
-      console.warn = originalWarn;
-      
-      // Verify it has the expected exports
-      if (module && typeof module.launchImageLibraryAsync === 'function') {
-        _imagePickerModule = module;
-        if (__DEV__) {
-          console.log('[AIExample] ✅ expo-image-picker loaded successfully');
-        }
-        return module;
-      } else {
-        if (__DEV__) {
-          console.warn('[AIExample] ⚠️ expo-image-picker module loaded but missing expected exports:', {
-            hasModule: !!module,
-            hasLaunchImageLibraryAsync: module && typeof module.launchImageLibraryAsync === 'function',
-            exports: module ? Object.keys(module) : [],
-          });
-        }
-      }
-    } catch (requireError: any) {
-      // Restore console functions before handling error
-      console.error = originalError;
-      console.warn = originalWarn;
-      
-      // Module not available or not properly linked
-      _imagePickerModule = null;
-      return null;
-    }
-  } catch (outerError: any) {
-    // Restore console functions in case of any unexpected error
-    console.error = originalError;
-    console.warn = originalWarn;
-    _imagePickerModule = null;
-    return null;
-  }
-  
-  return null;
-}
 
 // Cache for document picker module
 let _documentPickerModule: any = null;
@@ -162,13 +95,9 @@ function getDocumentPicker() {
 
 export default function AIExampleScreen() {
   const { colors } = useTheme();
-  
-  // Chat state
-  const [chatMessage, setChatMessage] = useState('');
-  
-  // Image state
-  const [imageUrl, setImageUrl] = useState('');
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const conversationId = 'ai-example-demo';
+  const chatController = useAIChat(conversationId);
+  const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   
   // Document state
   const [documentUri, setDocumentUri] = useState<string | null>(null);
@@ -183,104 +112,25 @@ export default function AIExampleScreen() {
   const [videoName, setVideoName] = useState<string | null>(null);
   
   // Prompt state
-  const [imagePrompt, setImagePrompt] = useState('Describe this image in detail');
   const [documentPrompt, setDocumentPrompt] = useState('Summarize this document');
   const [audioPrompt, setAudioPrompt] = useState('Describe what you hear in this audio');
   const [videoPrompt, setVideoPrompt] = useState('Describe what happens in this video');
   
-  // Check if native modules are available (check at runtime)
-  const [imagePickerAvailable, setImagePickerAvailable] = React.useState<boolean>(false);
   const [documentPickerAvailable, setDocumentPickerAvailable] = React.useState<boolean>(false);
 
   // Check module availability on mount and when component updates
   useEffect(() => {
     if (Platform.OS !== 'web') {
-      const imgPicker = getImagePicker();
       const docPicker = getDocumentPicker();
-      setImagePickerAvailable(imgPicker !== null);
       setDocumentPickerAvailable(docPicker !== null);
-      
-      if (__DEV__) {
-        console.log('[AIExample] Native modules check:', {
-          imagePicker: imgPicker !== null,
-          documentPicker: docPicker !== null,
-          platform: Platform.OS,
-        });
-      }
     }
   }, []);
 
   // Hooks
-  const { sendMessage, messages, isStreaming: chatStreaming, currentMessage } = useAIChat();
-  const { analyze: analyzeImage, loading: visionLoading, result: visionResult } = useAIVision();
   const { analyze: analyzeDoc, loading: docLoading, result: docResult } = useAIDocument();
   const { analyze: analyzeAud, loading: audioLoading, result: audioResult } = useAIAudio();
   const { analyze: analyzeVid, loading: videoLoading, result: videoResult } = useAIVideo();
-
-  const handleSendChat = async () => {
-    if (!chatMessage.trim()) {
-      Alert.alert('Error', 'Please enter a message');
-      return;
-    }
-    try {
-      await sendMessage(chatMessage);
-      setChatMessage('');
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
-
-  // Image picker - same approach as document picker
-  const handlePickImage = async () => {
-    const ImagePicker = getImagePicker();
-    if (!ImagePicker) {
-      Alert.alert(
-        'Image Picker Not Available',
-        'Image picker is not available. Please use the URL input field to provide an image URL, or rebuild the app to enable native modules.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    try {
-      // Request permissions
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant photo library permissions');
-        return;
-      }
-
-      // Launch image library - same pattern as document picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
-        setImageUrl(''); // Clear URL when using file picker
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to pick image');
-    }
-  };
-
-  const handleAnalyzeImage = async () => {
-    if (!imageUrl.trim() && !imageUri) {
-      Alert.alert('Error', 'Please enter an image URL or pick an image');
-      return;
-    }
-    try {
-      if (imageUri) {
-        await analyzeImage({ imageUri, prompt: imagePrompt });
-      } else {
-        await analyzeImage({ imageUrl, prompt: imagePrompt });
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
+  const { analyze: transcribeAudio, loading: voiceLoading } = useAIAudio();
 
   // Document picker
   const handlePickDocument = async () => {
@@ -385,6 +235,27 @@ export default function AIExampleScreen() {
     }
   };
 
+  const handleVoiceRecordingComplete = async ({ uri }: { uri: string; duration: number }) => {
+    try {
+      setVoiceTranscript('Transcribing voice input…');
+      const transcription = await transcribeAudio({
+        audioUri: uri,
+        prompt: 'Transcribe this spoken audio into plain text',
+      });
+      const transcript = transcription?.description?.trim();
+      if (transcript) {
+        setVoiceTranscript(transcript);
+        await chatController.startChat({ message: transcript, conversationId });
+      } else {
+        setVoiceTranscript('No speech detected');
+      }
+    } catch (error: any) {
+      const message = error?.message || 'Failed to transcribe audio';
+      setVoiceTranscript(message);
+      Alert.alert('Voice Input Error', message);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader title="AI Examples" />
@@ -395,54 +266,25 @@ export default function AIExampleScreen() {
       >
         {/* Chat Example */}
         <Card className="mb-4 rounded-xl overflow-hidden">
-          <Card.Body className="p-4">
-            <Text style={[styles.title, { color: colors.foreground }]}>Chat Example</Text>
-            <ScrollView 
-              style={[styles.chatContainer, { backgroundColor: colors.muted }]}
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={true}
-            >
-              {messages.length === 0 && !chatStreaming && (
-                <View style={[styles.messageContainer, { backgroundColor: colors.muted }]}>
-                  <Text style={[styles.messageText, { color: colors.mutedForeground, fontStyle: 'italic' }]}>
-                    No messages yet. Start a conversation!
-                  </Text>
-                </View>
-              )}
-              {messages.map((msg, index) => (
-                <View key={msg.id || index} style={[styles.messageContainer, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.messageRole, { color: colors.foreground }]}>
-                    {msg.role}:
-                  </Text>
-                  <Text style={[styles.messageText, { color: colors.foreground }]}>
-                    {msg.content || '(empty)'}
-                  </Text>
-                </View>
-              ))}
-              {chatStreaming && currentMessage && (
-                <View style={[styles.messageContainer, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.messageRole, { color: colors.foreground }]}>
-                    assistant:
-                  </Text>
-                  <Text style={[styles.messageText, { color: colors.foreground }]}>
-                    {currentMessage}
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-            <FormInput
-              placeholder="Enter your message"
-              value={chatMessage}
-              onChangeText={setChatMessage}
-              multiline
-              containerStyle={styles.inputContainer}
-            />
-            <FormButton
-              title={chatStreaming ? 'Sending...' : 'Send Message'}
-              onPress={handleSendChat}
-              loading={chatStreaming}
-              variant="primary"
-              fullWidth
+          <Card.Body className="p-4" style={{ gap: 16 }}>
+            <View style={styles.voiceRow}>
+              <AIChip
+                style={styles.voiceChip}
+                onRecordingComplete={handleVoiceRecordingComplete}
+                showLoadingIndicator
+              />
+              <View style={styles.voiceInfo}>
+                <Text style={[styles.voiceLabel, { color: colors.foreground }]}>Voice capture</Text>
+                <Text style={[styles.voiceStatus, { color: colors.mutedForeground }]}>
+                  {voiceLoading ? 'Transcribing audio…' : voiceTranscript ? `Last prompt: ${voiceTranscript}` : 'Hold the chip to talk'}
+                </Text>
+              </View>
+            </View>
+
+            <AIConversation
+              conversationId={conversationId}
+              controller={chatController}
+              title="AI Conversation"
             />
           </Card.Body>
         </Card>
@@ -450,48 +292,7 @@ export default function AIExampleScreen() {
         {/* Image Analysis Example */}
         <Card className="mb-4 rounded-xl overflow-hidden">
           <Card.Body className="p-4">
-            <Text style={[styles.title, { color: colors.foreground }]}>Image Analysis</Text>
-            <FormInput
-              placeholder="Image URL (or pick from device)"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              containerStyle={styles.inputContainer}
-            />
-            <FormInput
-              placeholder="Prompt (e.g., Describe this image)"
-              value={imagePrompt}
-              onChangeText={setImagePrompt}
-              containerStyle={styles.inputContainer}
-            />
-            {Platform.OS !== 'web' && (
-              <FormButton
-                title={imagePickerAvailable ? "Pick Image from Device" : "Pick Image (Not Available)"}
-                onPress={handlePickImage}
-                variant="secondary"
-                style={{ marginBottom: 12 }}
-                disabled={!imagePickerAvailable}
-              />
-            )}
-            {imageUri && (
-              <View style={styles.fileInfo}>
-                <Image source={{ uri: imageUri }} style={styles.previewImage} />
-                <Text style={[styles.fileName, { color: colors.mutedForeground }]}>Image selected</Text>
-              </View>
-            )}
-            <FormButton
-              title={visionLoading ? 'Analyzing...' : 'Analyze Image'}
-              onPress={handleAnalyzeImage}
-              loading={visionLoading}
-              variant="primary"
-              fullWidth
-            />
-            {visionResult && (
-              <View style={[styles.resultContainer, { backgroundColor: colors.muted }]}>
-                <Text style={[styles.resultText, { color: colors.foreground }]}>
-                  {visionResult.description}
-                </Text>
-              </View>
-            )}
+            <AIVision />
           </Card.Body>
         </Card>
 
@@ -644,38 +445,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
-  chatContainer: {
-    maxHeight: 200,
-    marginBottom: 12,
-    padding: 8,
-    borderRadius: 8,
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
-  messageContainer: {
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 8,
+  voiceChip: {
+    flexShrink: 0,
   },
-  messageRole: {
-    fontWeight: 'bold',
-    fontSize: 12,
-    opacity: 0.8,
+  voiceInfo: {
+    flex: 1,
+    gap: 4,
   },
-  messageText: {
-    marginTop: 4,
+  voiceLabel: {
     fontSize: 14,
-    lineHeight: 20,
-    flexShrink: 1,
+    fontWeight: '600',
+  },
+  voiceStatus: {
+    fontSize: 12,
   },
   inputContainer: {
     marginBottom: 12,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  halfButton: {
-    flex: 1,
   },
   fileInfo: {
     marginTop: 12,

@@ -2,193 +2,111 @@
 
 Created by Kien AI (leejungkiin@gmail.com)
 
+This guide covers both the hook layer (`useAI*`) and the new AI component library that abstracts common UI flows.
+
 ## Quick Start
 
-### 1. Import the hooks
+### Conversation UI in 3 steps
 
-```typescript
-import { useAIChat, useAIVision, useAISpeech } from '@/services/ai';
-```
+```tsx
+import { useAIChat } from '@/hooks/use-ai';
+import { AIChip, AIConversation } from '@/components/ai';
 
-### 2. Chat with AI
+const conversationId = 'demo-conversation';
 
-```typescript
-function ChatScreen() {
-  const { sendMessage, messages, isStreaming } = useAIChat();
-  const [input, setInput] = useState('');
+export function AIChatExample() {
+  const chat = useAIChat(conversationId);
 
-  const handleSend = async () => {
-    await sendMessage(input);
-    setInput('');
+  const handleVoiceComplete = async ({ uri }: { uri: string; duration: number }) => {
+    // Optional: transcribe audio before sending
+    await chat.startChat({ message: 'Voice input captured', conversationId });
   };
 
   return (
     <View>
-      {messages.map((msg) => (
-        <Text key={msg.id}>{msg.role}: {msg.content}</Text>
-      ))}
-      <TextInput value={input} onChangeText={setInput} />
-      <Button onPress={handleSend} title="Send" disabled={isStreaming} />
+      <AIChip onRecordingComplete={handleVoiceComplete} />
+      <AIConversation controller={chat} conversationId={conversationId} />
     </View>
   );
 }
 ```
 
-### 3. Analyze Images
+`AIConversation` renders the full chat timeline, streaming output, prompt input, export/clear controls, and integrates with the Zustand `aiStore` for persistence.
 
-```typescript
-function VisionScreen() {
-  const { analyze, loading, result } = useAIVision();
+### Vision analysis UI
 
-  const handleAnalyze = async () => {
-    await analyze({
-      imageUrl: 'https://example.com/image.jpg',
-      prompt: 'Describe this image',
-    });
-  };
+```tsx
+import { AIVision } from '@/components/ai';
 
-  return (
-    <View>
-      <Button onPress={handleAnalyze} title="Analyze" disabled={loading} />
-      {result && <Text>{result.description}</Text>}
-    </View>
-  );
+export function VisionExample() {
+  return <AIVision defaultPrompt="Describe this image in detail" />;
 }
 ```
 
-## API Reference
+`AIVision` handles image selection (device or URL), prompt input, loading states, and result rendering.
 
-### Hooks
+## Hooks Overview
 
-#### useAIChat
+### useAIChat(conversationId?, options?)
+- Streams Gemini responses with automatic conversation persistence
+- Exposes `messages`, `isStreaming`, `currentMessage`, `startChat`, `sendMessage`, `clearConversation`
+- Supports retry logic via options (`retryCount`, `retryDelay`, `timeout`)
 
-Chat with AI with conversation management.
+### useAIVision(options?)
+- Analyze remote URLs, local URIs, or base64 images
+- Returns `{ analyze, loading, error, result }` where `result.description` contains the AI summary
 
-```typescript
-const {
-  messages,
-  isStreaming,
-  error,
-  currentMessage,
-  sendMessage,
-  startChat,
-  clearConversation,
-} = useAIChat(conversationId?, options?);
-```
+### useAIDocument / useAIAudio / useAIVideo
+- Accept URI/URL/Base64 assets with descriptive prompts
+- Return `{ description }` strings with the AI summary
 
-**Options:**
-- `retryCount?: number` - Number of retries (default: 3)
-- `retryDelay?: number` - Delay between retries in ms (default: 1000)
-- `timeout?: number` - Request timeout in ms (default: 30000)
-- `onError?: (error: Error) => void` - Error callback
-- `onSuccess?: (result: any) => void` - Success callback
+### useAIEmbeddings
+- `embed` text fragments and `search` in-memory document collections for semantic similarity
 
-#### useAIVision
+> ℹ️ Hooks are exported via `@/services/ai` and re-exported from `@/services` for the unified abstraction layer.
 
-Analyze images with AI.
+## Component Library
 
-```typescript
-const { analyze, loading, error, result } = useAIVision(options?);
-```
+Component exports live in `@/components/ai`.
 
-#### useAISpeech
+### AIChip
+- Microphone pill with recording state, waveform visualization (Skia), haptics, and permission handling
+- Props: `onRecordingComplete`, `onError`, `onStateChange`, `size` (`sm` | `md` | `lg`)
 
-Speech-to-text conversion.
+### AIPrompt
+- Multiline prompt entry with autocomplete suggestions, history navigation, character counter, and send button
+- Props: `onRequestSuggestions`, `suggestions`, `enableHistory`, `clearOnSubmit`
 
-```typescript
-const { transcribe, loading, error, transcript } = useAISpeech(options?);
-```
+### AIStreaming
+- Animated assistant response with typing effect, markdown rendering, copy/regenerate/stop controls
+- Props: `text`, `isStreaming`, `usage`, `onCopy`, `onRegenerate`, `onStop`
 
-#### useAITTS
+### AIConversation
+- Turn-key conversation surface combining message timeline, prompt input, export/clear actions
+- Accepts optional `controller` (from `useAIChat`) for advanced integrations, otherwise instantiates internally
 
-Text-to-speech conversion.
-
-```typescript
-const { speak, loading, error, audioUrl } = useAITTS(options?);
-```
-
-#### useAIEmbeddings
-
-Generate embeddings and semantic search.
-
-```typescript
-const { embed, search, loading, error, embeddings } = useAIEmbeddings(options?);
-
-// Generate embeddings
-await embed({ text: 'Hello world' });
-
-// Semantic search
-const results = await search(
-  'query text',
-  [
-    { id: '1', text: 'Document 1' },
-    { id: '2', text: 'Document 2' },
-  ],
-  5 // top K results
-);
-```
+### AIVision
+- End-to-end vision workflow: upload, prompt, analyze, copy results
+- Supports mobile file pickers and web URL input out of the box
 
 ## Best Practices
 
-### 1. Error Handling
+### 1. Centralize controllers
+Instantiate `useAIChat` once per screen and pass the controller to `AIConversation`, background workers, or voice integrations.
 
-Always handle errors:
+### 2. Handle async errors
+Provide `onError` callbacks or wrap `startChat`/`analyze` calls in try/catch to surface meaningful feedback.
 
-```typescript
-const { sendMessage, error } = useAIChat(undefined, {
-  onError: (error) => {
-    Alert.alert('Error', error.message);
-  },
-});
-```
+### 3. Respect streaming state
+Disable send actions while `isStreaming` or provide a "Stop" button via `AIStreaming`'s `onStop` handler when you add abort logic.
 
-### 2. Loading States
+### 4. Monitor usage
+Each stored message may contain `usage.totalTokens`; accumulate these to display session cost estimates.
 
-Show loading indicators:
+### 5. Compose components
+`AIChip + AIPrompt + AIStreaming` can be rearranged or themed independently thanks to TypeScript props and theming hooks.
 
-```typescript
-const { isStreaming } = useAIChat();
+## Examples & Reference
 
-{isStreaming && <ActivityIndicator />}
-```
-
-### 3. Conversation Management
-
-Use conversation IDs for context:
-
-```typescript
-const conversationId = 'conv_123';
-const { sendMessage, messages } = useAIChat(conversationId);
-
-// Messages are automatically stored and retrieved
-```
-
-### 4. Rate Limiting
-
-Handle rate limits gracefully:
-
-```typescript
-const { sendMessage } = useAIChat(undefined, {
-  onError: (error) => {
-    if (error.message.includes('rate limit')) {
-      // Show rate limit message
-      Alert.alert('Rate Limit', 'Please wait before sending another message');
-    }
-  },
-});
-```
-
-### 5. Token Usage
-
-Monitor token usage:
-
-```typescript
-const { messages } = useAIChat();
-const totalTokens = messages.reduce((sum, msg) => {
-  return sum + (msg.usage?.totalTokens || 0);
-}, 0);
-```
-
-## Examples
-
-See `app/modules/examples/ai-example/index.tsx` for complete examples.
+- `app/modules/examples/ai-example/index.tsx` showcases the full experience with voice capture, conversation UI, and multimodal samples.
+- All components are re-exported via `@/components/ai/index.ts` for single-import ergonomics.

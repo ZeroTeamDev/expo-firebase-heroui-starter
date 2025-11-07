@@ -1,0 +1,103 @@
+{
+  "projectName": "RockoAI - Expo Firebase HeroUI Starter",
+  "projectType": "mobile",
+  "primaryLanguage": "en",
+  "techStack": {
+    "frontend": [
+      "React Native",
+      "Expo",
+      "TypeScript",
+      "Expo Router"
+    ],
+    "ui": [
+      "HeroUI Native",
+      "NativeWind",
+      "Tailwind CSS",
+      "React Native Skia",
+      "Moti"
+    ],
+    "backend": [
+      "Firebase",
+      "Firebase Functions",
+      "Firestore",
+      "Firebase Remote Config",
+      "Firebase Analytics"
+    ],
+    "stateManagement": [
+      "Zustand",
+      "React Query"
+    ],
+    "forms": [
+      "React Hook Form",
+      "Zod"
+    ],
+    "ai": [
+      "Google Gemini API",
+      "Firebase AI Functions"
+    ],
+    "platforms": [
+      "iOS",
+      "Android",
+      "Web"
+    ],
+    "deployment": [
+      "Expo EAS",
+      "Firebase Hosting"
+    ]
+  },
+  "projectStage": "development",
+  "targetAudience": "Developers building cross-platform mobile applications with Firebase backend, AI capabilities, and modern UI components. Suitable for startups and developers who need a production-ready starter kit with authentication, database, analytics, and AI integration.",
+  "projectGoals": [
+    "Provide a comprehensive starter kit for Expo + Firebase + HeroUI development",
+    "Implement modular architecture with reusable components and services",
+    "Integrate AI capabilities through Firebase Functions and Google Gemini API",
+    "Create developer-friendly abstraction layers for Firebase services",
+    "Build a complete UI component library with examples",
+    "Support cross-platform development (iOS, Android, Web)",
+    "Implement authentication, database, analytics, and remote config",
+    "Provide comprehensive documentation and developer guides"
+  ],
+  "codingStandards": {
+    "language": "en",
+    "namingConvention": "camelCase",
+    "indentation": "spaces",
+    "indentationSize": 2,
+    "lineLength": 100,
+    "fileNaming": "kebab-case for files, PascalCase for components"
+  },
+  "documentationLanguage": "en",
+  "architecture": {
+    "pattern": "Modular Architecture with Service Layer Abstraction",
+    "features": [
+      "File-based routing with Expo Router",
+      "Module system for feature organization",
+      "Service layer abstraction for Firebase",
+      "Store-based state management with Zustand",
+      "Custom hooks for common operations",
+      "Component library with examples"
+    ]
+  },
+  "keyFeatures": [
+    "Firebase Authentication (Email/Password, Google OAuth)",
+    "Firestore Database Integration",
+    "Firebase Remote Config",
+    "Firebase Analytics",
+    "AI Chat Integration (Google Gemini)",
+    "Protected Routing",
+    "Theme Support (Light/Dark)",
+    "Form Validation",
+    "Haptic Feedback",
+    "Cross-Platform Support"
+  ],
+  "createdDate": "2024-01-01",
+  "lastUpdated": "2025-01-27",
+  "maintainer": {
+    "name": "Kien AI",
+    "email": "leejungkiin@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "branchStrategy": "feature branches with main branch"
+  }
+}
+
