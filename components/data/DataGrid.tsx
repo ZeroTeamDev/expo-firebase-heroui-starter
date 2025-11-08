@@ -1,5 +1,5 @@
 // Created by Kien AI (leejungkiin@gmail.com)
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   FlatList,
   ListRenderItem,
@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
   ViewStyle,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useTheme } from 'heroui-native';
 
@@ -54,15 +55,36 @@ export function DataGrid<T>({
   scrollEnabled = true,
   nestedScrollEnabled = true,
 }: DataGridProps<T>) {
-  const { width } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+  const [containerWidth, setContainerWidth] = useState(windowWidth);
 
-  const numColumns = useMemo(() => {
-    const available = Math.max(1, width - 48); // account for typical padding
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    if (width > 0) {
+      setContainerWidth(width);
+    }
+  }, []);
+
+  const { numColumns, itemWidth } = useMemo(() => {
+    // Use actual container width instead of window width for accurate calculation
+    const available = Math.max(1, containerWidth);
+    
+    // Calculate number of columns based on minColumnWidth
     const computed = Math.max(1, Math.floor(available / Math.max(minColumnWidth, 120)));
-    return Math.min(maxColumns, computed);
-  }, [maxColumns, minColumnWidth, width]);
+    const cols = Math.min(maxColumns, computed);
+    
+    // Calculate actual item width
+    // Available width minus spacing between columns
+    const totalSpacing = (cols - 1) * spacing;
+    const itemW = Math.max(100, Math.floor((available - totalSpacing) / cols));
+    
+    return {
+      numColumns: cols,
+      itemWidth: itemW,
+    };
+  }, [maxColumns, minColumnWidth, containerWidth, spacing]);
 
   const refreshControl = onRefresh
     ? (
@@ -82,23 +104,26 @@ export function DataGrid<T>({
   );
 
   return (
-    <View style={[styles.container, style]}> 
+    <View 
+      style={[styles.container, style]}
+      onLayout={handleLayout}
+    > 
       <FlatList
         data={data}
         key={numColumns}
         keyExtractor={keyExtractor}
         renderItem={(info) => (
-          <View style={{ flex: 1 / numColumns, padding: spacing / 2 }}>
+          <View style={{ width: itemWidth }}>
             {renderItem(info)}
           </View>
         )}
         numColumns={numColumns}
         columnWrapperStyle={
-          numColumns > 1 ? { gap: spacing, paddingHorizontal: spacing / 2 } : undefined
+          numColumns > 1 ? { gap: spacing, justifyContent: 'flex-start' } : undefined
         }
         contentContainerStyle={[
           styles.gridContent,
-          { paddingVertical: spacing, gap: spacing },
+          { paddingVertical: spacing },
           contentContainerStyle,
         ]}
         ListHeaderComponent={ListHeaderComponent}
@@ -124,7 +149,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gridContent: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 0,
+    gap: 0,
   },
   emptyContainer: {
     paddingVertical: 48,

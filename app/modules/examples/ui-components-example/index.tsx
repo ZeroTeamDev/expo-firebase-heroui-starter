@@ -99,6 +99,9 @@ const SHOWCASE: ShowcaseCard[] = [
   { id: 'sc4', name: 'Incident Command', category: 'Reliability', usage: 'SLA 99.98%', lastUpdated: 'Updated 30m ago' },
   { id: 'sc5', name: 'AI Prompt Library', category: 'Enablement', usage: '48 prompts curated', lastUpdated: 'Updated 3d ago' },
   { id: 'sc6', name: 'Design Tokens', category: 'Design System', usage: 'Synced with Figma', lastUpdated: 'Updated 1d ago' },
+  { id: 'sc7', name: 'User Analytics', category: 'Analytics', usage: '5.4k active users', lastUpdated: 'Updated 15m ago' },
+  { id: 'sc8', name: 'API Performance', category: 'Monitoring', usage: '99.9% uptime', lastUpdated: 'Updated 1h ago' },
+  { id: 'sc9', name: 'Content Moderation', category: 'Safety', usage: '1.2k reviews/day', lastUpdated: 'Updated 45m ago' },
 ];
 
 const VIDEO_SAMPLE: { uri: string } = {
@@ -520,7 +523,8 @@ function UIComponentsExampleContent() {
                   condensed
                 />
               )}
-              minColumnWidth={isWeb ? 220 : 200}
+              minColumnWidth={isWeb ? 280 : 160}
+              maxColumns={isWeb ? 3 : 2}
               spacing={isWeb ? 16 : 12}
               scrollEnabled={false}
               nestedScrollEnabled={false}
