@@ -72,6 +72,7 @@ export function FormDatePicker({
   const [internalRange, setInternalRange] = useState<DateRangeValue>(defaultRangeValue);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<Target>('single');
+  const [tempPickerValue, setTempPickerValue] = useState<Date>(new Date());
 
   const selectedValue = controlled ? value ?? null : internalValue;
   const selectedRange = range
@@ -159,9 +160,17 @@ export function FormDatePicker({
   const openIOSPicker = useCallback(
     (target: Target) => {
       setPickerTarget(target);
+      // Set initial temp value based on current selection
+      const baseDate =
+        target === 'start'
+          ? selectedRange?.start ?? new Date()
+          : target === 'end'
+          ? selectedRange?.end ?? new Date()
+          : selectedValue ?? new Date();
+      setTempPickerValue(baseDate);
       setPickerVisible(true);
     },
-    [],
+    [selectedRange, selectedValue],
   );
 
   const handleAndroidPicker = useCallback(
@@ -265,6 +274,11 @@ export function FormDatePicker({
   );
 
   const pickerBaseValue = useMemo(() => {
+    // Use temp value when picker is visible to allow user to scroll without confirming
+    if (pickerVisible) {
+      return tempPickerValue;
+    }
+    // Otherwise use actual selected value
     if (!range) {
       return selectedValue ?? new Date();
     }
@@ -275,7 +289,7 @@ export function FormDatePicker({
       return selectedRange?.end ?? new Date();
     }
     return new Date();
-  }, [pickerTarget, range, selectedRange?.end, selectedRange?.start, selectedValue]);
+  }, [pickerVisible, pickerTarget, range, selectedRange?.end, selectedRange?.start, selectedValue, tempPickerValue]);
 
   return (
     <View style={{ marginBottom: 16 }}>
@@ -315,7 +329,7 @@ export function FormDatePicker({
                 </Text>
                 <Pressable
                   onPress={() => {
-                    handleConfirm(pickerTarget, pickerBaseValue);
+                    handleConfirm(pickerTarget, tempPickerValue);
                     setPickerVisible(false);
                   }}
                 >
@@ -324,11 +338,13 @@ export function FormDatePicker({
               </View>
               <DateTimePicker
                 mode={mode === 'datetime' ? 'datetime' : mode}
-                value={pickerBaseValue}
+                value={tempPickerValue}
                 display="spinner"
                 onChange={(_event, date) => {
-                  if (!date) return;
-                  handleConfirm(pickerTarget, date);
+                  // Only update temp value, don't confirm yet
+                  if (date) {
+                    setTempPickerValue(date);
+                  }
                 }}
                 minimumDate={minimumDate}
                 maximumDate={maximumDate}
@@ -363,6 +379,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
+    minHeight: 300,
   },
   iosModalHeader: {
     flexDirection: 'row',

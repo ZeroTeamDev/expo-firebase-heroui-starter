@@ -778,28 +778,47 @@ export function GlassTabBar({
         </View>
 
         {/* Tab items - Render LAST with high z-index (stays on top) */}
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
-          const onPress = () => handleTabPress(route, isFocused);
-          const onLongPress = () => {
-            navigation.emit({ type: "tabLongPress", target: route.key });
-          };
-          return (
-            <TabItem
-              key={route.key}
-              route={route}
-              options={options}
-              isFocused={isFocused}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              colors={colors}
-              onLayout={handleActiveTabLayout}
-              tabBarRef={tabBarRef}
-              tabIndex={index}
-            />
-          );
-        })}
+        {state.routes
+          .filter((route) => {
+            const { options } = descriptors[route.key];
+            // List of routes that should be hidden from tab bar
+            const hiddenRoutes = ['profile', 'radio', 'search'];
+            
+            // Hide routes by name (most reliable way)
+            if (hiddenRoutes.includes(route.name)) {
+              return false;
+            }
+            
+            // Also hide routes with href: null (expo-router way)
+            if (options.href === null) {
+              return false;
+            }
+            
+            return true;
+          })
+          .map((route, visibleIndex) => {
+            const { options } = descriptors[route.key];
+            const originalIndex = state.routes.findIndex((r) => r.key === route.key);
+            const isFocused = state.index === originalIndex;
+            const onPress = () => handleTabPress(route, isFocused);
+            const onLongPress = () => {
+              navigation.emit({ type: "tabLongPress", target: route.key });
+            };
+            return (
+              <TabItem
+                key={route.key}
+                route={route}
+                options={options}
+                isFocused={isFocused}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                colors={colors}
+                onLayout={handleActiveTabLayout}
+                tabBarRef={tabBarRef}
+                tabIndex={visibleIndex}
+              />
+            );
+          })}
       </View>
     </View>
   );

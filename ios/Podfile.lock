@@ -1961,7 +1961,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNDateTimePicker (7.7.0):
+  - RNDateTimePicker (8.4.4):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2727,7 +2727,7 @@ SPEC CHECKSUMS:
   ReactCommon: 149b6c05126f2e99f2ed0d3c63539369546f8cae
   ReactNativeDependencies: ed6d1e64802b150399f04f1d5728ec16b437251e
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4
-  RNDateTimePicker: f548c4f2447b5c0db706b0ea753447934878c0d5
+  RNDateTimePicker: be0e44bcb9ed0607c7c5f47dbedd88cf091f6791
   RNFBApp: 255fa19a91d6c1309e021ee75d5d209754e5961b
   RNFBRemoteConfig: fd01bfffca19f0ac1f4f0b4391dfb04d80a84e0b
   RNGestureHandler: 2914750df066d89bf9d8f48a10ad5f0051108ac3

@@ -72,6 +72,28 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="discover"
+        options={{
+          title: "Discover",
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol size={size} name="star.fill" color={color} />
+          ),
+          headerShown: true,
+          header: () => <AppHeader title="Discover" />,
+        }}
+      />
+      <Tabs.Screen
+        name="activity"
+        options={{
+          title: "Activity",
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol size={size} name="clock" color={color} />
+          ),
+          headerShown: true,
+          header: () => <AppHeader title="Activity" />,
+        }}
+      />
+      <Tabs.Screen
         name="library"
         options={{
           title: "Library",
@@ -83,29 +105,34 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="radio"
+        name="settings"
         options={{
-          title: "Radio",
+          title: "Settings",
           tabBarIcon: ({ color, size }) => (
-            <IconSymbol
-              size={size}
-              name="antenna.radiowaves.left.and.right"
-              color={color}
-            />
+            <IconSymbol size={size} name="gear" color={color} />
           ),
           headerShown: true,
-          header: () => <AppHeader title="Radio" />,
+          header: () => <AppHeader title="Settings" />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null, // Hide from tab bar
+          headerShown: true,
+          header: () => <AppHeader title="Profile" />,
+        }}
+      />
+      <Tabs.Screen
+        name="radio"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: "",
-          tabBarIcon: ({ color, size }) => (
-            <IconSymbol size={size} name="magnifyingglass" color={color} />
-          ),
-          headerShown: true,
-          header: () => <AppHeader title="Search" showSearch={false} />,
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>

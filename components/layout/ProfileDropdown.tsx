@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GlassPanel } from '@/components/glass';
 import { useAuthStore } from '@/stores/authStore';
@@ -48,9 +48,13 @@ export function ProfileDropdown({ size = 32 }: ProfileDropdownProps) {
   const { colors, theme } = useTheme();
   const { user } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<View>(null);
+  
+  // Check if we're currently on the profile screen
+  const isOnProfileScreen = pathname?.includes('/profile');
 
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.95);
@@ -83,6 +87,17 @@ export function ProfileDropdown({ size = 32 }: ProfileDropdownProps) {
     setIsOpen(!isOpen);
   };
 
+  const handleAvatarPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // If not on profile screen, navigate to profile
+    // Otherwise, open dropdown menu
+    if (!isOnProfileScreen) {
+      router.push('/(tabs)/profile');
+    } else {
+      handleToggle();
+    }
+  };
+
   const handleClose = () => {
     setIsOpen(false);
   };
@@ -108,8 +123,7 @@ export function ProfileDropdown({ size = 32 }: ProfileDropdownProps) {
       label: 'Profile',
       icon: 'person.circle.fill',
       onPress: () => {
-        // Navigate to profile screen when available
-        console.log('Navigate to profile');
+        router.push('/(tabs)/profile');
       },
     },
     {
@@ -117,8 +131,7 @@ export function ProfileDropdown({ size = 32 }: ProfileDropdownProps) {
       label: 'Settings',
       icon: 'gear',
       onPress: () => {
-        // Navigate to settings screen when available
-        console.log('Navigate to settings');
+        router.push('/(tabs)/settings');
       },
     },
     {
@@ -160,20 +173,20 @@ export function ProfileDropdown({ size = 32 }: ProfileDropdownProps) {
   return (
     <View ref={dropdownRef} style={styles.container}>
       <TouchableOpacity
-        onPress={handleToggle}
+        onPress={handleAvatarPress}
         style={[
           styles.avatarButton,
           {
             width: size + 8,
             height: size + 8,
             borderRadius: (size + 8) / 2,
-            borderColor: isOpen ? colors.accent : 'transparent',
-            borderWidth: isOpen ? 2 : 0,
+            borderColor: isOpen || isOnProfileScreen ? colors.accent : 'transparent',
+            borderWidth: isOpen || isOnProfileScreen ? 2 : 0,
           },
         ]}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel="Open profile menu"
+        accessibilityLabel={isOnProfileScreen ? "Open profile menu" : "Go to profile"}
       >
         {user?.photoURL ? (
           <View

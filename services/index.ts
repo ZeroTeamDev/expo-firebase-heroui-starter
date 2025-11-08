@@ -77,3 +77,16 @@ export {
   type EcommerceItem,
 } from './analytics';
 
+// Configuration services
+export {
+  getGlobalConfig,
+  updateGlobalConfig,
+  getConfigValue,
+  isFeatureEnabled,
+  getModuleSettings,
+  isModuleEnabled,
+  subscribeToGlobalConfig,
+  syncWithRemoteConfig,
+  type GlobalConfig,
+} from './config';
+

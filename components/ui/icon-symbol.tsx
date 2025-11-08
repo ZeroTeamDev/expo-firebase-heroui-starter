@@ -32,6 +32,7 @@ const MAPPING = {
   'clock': 'schedule',
   'trending-up': 'trending-up',
   'star': 'star',
+  'star.fill': 'star',
 } as IconMapping;
 
 /**

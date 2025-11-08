@@ -1,8 +1,8 @@
 /**
- * Library Screen
+ * Activity Screen
  * Created by Kien AI (leejungkiin@gmail.com)
  *
- * Library placeholder screen
+ * Activity placeholder screen
  */
 
 import React from 'react';
@@ -11,13 +11,13 @@ import { useTheme } from 'heroui-native';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 
-export default function LibraryScreen() {
+export default function ActivityScreen() {
   const { colors } = useTheme();
   const bottomPadding = useTabBarPadding();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppHeader title="Library" />
+      <AppHeader title="Activity" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
@@ -25,10 +25,10 @@ export default function LibraryScreen() {
       >
         <View style={styles.placeholderContainer}>
           <Text style={[styles.placeholderTitle, { color: colors.foreground }]}>
-            Library
+            Activity
           </Text>
           <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>
-            Your saved content and collections
+            Your recent activity and updates
           </Text>
         </View>
       </ScrollView>
@@ -63,3 +63,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
