@@ -86,6 +86,7 @@
       "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
       }
-    }
+    },
+    "java.configuration.updateBuildConfiguration": "disabled"
   }
 }

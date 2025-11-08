@@ -1,5 +1,21 @@
 // Created by Kien AI (leejungkiin@gmail.com)
-export type ModuleId = 'weather' | 'entertainment' | 'management' | 'ai-tools' | 'saas' | 'database-example' | 'analytics-example' | 'ai-example' | 'ui-components-example' | 'todo-app' | 'chat-app' | 'ai-assistant' | 'ecommerce' | 'dev-tools' | 'notification-example';
+export type ModuleId =
+  | "weather"
+  | "entertainment"
+  | "management"
+  | "ai-tools"
+  | "saas"
+  | "database-example"
+  | "analytics-example"
+  | "ai-example"
+  | "ui-components-example"
+  | "todo-app"
+  | "chat-app"
+  | "ai-assistant"
+  | "ecommerce"
+  | "dev-tools"
+  | "notification-example"
+  | "bottom-sheet-example";
 
 export interface ModuleRoute {
   path: string;

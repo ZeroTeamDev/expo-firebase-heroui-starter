@@ -31,6 +31,7 @@ import aiAssistant from './examples/ai-assistant';
 import ecommerce from './examples/ecommerce';
 import devTools from './dev-tools';
 import notificationExample from './examples/notification-example';
+import bottomSheetExample from './examples/bottom-sheet-example';
 
 registerModule(weather);
 registerModule(entertainment);
@@ -47,3 +48,4 @@ registerModule(aiAssistant);
 registerModule(ecommerce);
 registerModule(devTools);
 registerModule(notificationExample);
+registerModule(bottomSheetExample);

@@ -42,6 +42,12 @@ const modules = [
     description: 'Complete notification system with inbox, settings, filtering, and push notification UI',
     route: '/modules/examples/notification-example',
   },
+  {
+    id: 'bottom-sheet-example',
+    title: 'Bottom Sheet Examples',
+    description: 'Explore reusable bottom sheet component with liquid glass effect, gestures, and multi-step navigation',
+    route: '/modules/examples/bottom-sheet-example',
+  },
 ];
 
 export default function ModulesIndexScreen() {

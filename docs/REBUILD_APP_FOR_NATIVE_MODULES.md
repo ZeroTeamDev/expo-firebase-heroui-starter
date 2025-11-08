@@ -130,3 +130,4 @@ Và các nút sẽ enable:
 **Next step:** Chạy `npx expo run:ios` để rebuild app với native modules.
 
 
+

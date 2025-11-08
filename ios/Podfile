@@ -14,6 +14,8 @@ prepare_react_native_project!
 
 target 'rockoai' do
   use_expo_modules!
+  
+  # Enable modular headers globally to fix Firebase Swift pod integration issues
   use_modular_headers!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
@@ -49,5 +51,18 @@ target 'rockoai' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => podfile_properties['apple.ccacheEnabled'] == 'true',
     )
+    
+    # Enable modular headers for Firebase and Google pods to fix Swift static library integration
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Enable modular headers for all Firebase and Google pods
+        if target.name.start_with?('Firebase') || 
+           target.name.start_with?('Google') || 
+           ['GoogleUtilities', 'GoogleDataTransport', 'nanopb'].include?(target.name)
+          config.build_settings['DEFINES_MODULE'] = 'YES'
+          config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+        end
+      end
+    end
   end
 end

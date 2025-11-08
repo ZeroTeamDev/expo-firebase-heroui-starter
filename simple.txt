@@ -1,0 +1,275 @@
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  ChevronLeft,
+  Bug,
+  MessageSquare,
+  Lightbulb,
+  Send,
+  Repeat,
+  Activity,
+  Coins,
+  Image as ImageIcon,
+  MoreHorizontal,
+  Check
+} from 'lucide-react';
+
+// --- Mock Data & Constants ---
+const MAIN_MENU_ITEMS = [
+  {
+    id: 'bug',
+    icon: Bug,
+    title: 'Report Bug',
+    description: 'Let us know about a specific issue you\'re experiencing.',
+    targetStep: 'reportBug'
+  },
+  {
+    id: 'feedback',
+    icon: MessageSquare,
+    title: 'Share Feedback',
+    description: 'Let us know how to improve by providing some feedback.',
+    targetStep: 'chooseAreas'
+  },
+  {
+    id: 'other',
+    icon: Lightbulb,
+    title: 'Something Else',
+    description: 'Request features, leave a nice comment, or anything else.',
+    targetStep: null // Just a placeholder for demo
+  }
+];
+
+const AREA_ITEMS = [
+  { id: 'send', icon: Send, label: 'Send' },
+  { id: 'swaps', icon: Repeat, label: 'Swaps' },
+  { id: 'activity', icon: Activity, label: 'Activity' },
+  { id: 'tokens', icon: Coins, label: 'Tokens' },
+  { id: 'collectibles', icon: ImageIcon, label: 'Collectibles' },
+  { id: 'other', icon: MoreHorizontal, label: 'Other' },
+];
+
+function App() {
+  const [isSheetOpen, setIsSheetOpen] = useState(true); // Start open for demo
+  const [currentStep, setCurrentStep] = useState('menu'); // 'menu', 'chooseAreas', 'reportBug'
+  const [selectedAreas, setSelectedAreas] = useState([]);
+  const [bugSubject, setBugSubject] = useState('');
+
+  // Handle Opening/Closing
+  const openSheet = () => {
+    setCurrentStep('menu');
+    setIsSheetOpen(true);
+  };
+  const closeSheet = () => setIsSheetOpen(false);
+
+  // Handle Navigation
+  const goToStep = (step) => setCurrentStep(step);
+  const goBack = () => setCurrentStep('menu');
+
+  // Handle Area Selection Toggle
+  const toggleArea = (id) => {
+    setSelectedAreas(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <div className="relative min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 font-sans overflow-hidden flex justify-center items-center">
+      {/* --- Background Content (Mock App) --- */}
+      <div className="text-center text-white p-8 transition-all duration-500" style={{ filter: isSheetOpen ? 'blur(4px) brightness(0.8)' : 'none', transform: isSheetOpen ? 'scale(0.95)' : 'scale(1)' }}>
+        <div className="text-9xl font-bold opacity-20 mix-blend-overlay">404</div>
+        <h1 className="text-4xl font-bold mb-4 drop-shadow-lg">Google</h1>
+        <p className="text-xl opacity-90 drop-shadow-md">Page Not Found</p>
+        {!isSheetOpen && (
+          <button
+            onClick={openSheet}
+            className="mt-12 px-6 py-3 bg-white/20 backdrop-blur-xl border border-white/40 text-white rounded-full font-semibold shadow-lg hover:bg-white/30 transition-all"
+          >
+            Open Help
+          </button>
+        )}
+      </div>
+
+      {/* --- Overlay (Dark background when sheet is open) --- */}
+      <div
+        className={`fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-500 z-40 ${isSheetOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={closeSheet}
+      />
+
+      {/* --- Bottom Sheet Container with Liquid Glass Effect --- */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-50 rounded-t-[40px] transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isSheetOpen ? 'translate-y-0' : 'translate-y-[110%]'}`}
+        style={{ 
+          maxHeight: '90vh',
+          // Liquid Glass Style
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1))',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.5)',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.5)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 4px 6px rgba(255,255,255,0.2)',
+        }}
+      >
+        {/* Handle bar for visual affordance */}
+        <div className="w-full flex justify-center pt-4 pb-2">
+           <div className="w-12 h-1.5 bg-white/50 rounded-full backdrop-blur-md shadow-sm"></div>
+        </div>
+
+        {/* Content Area with overflow for scrolling if needed */}
+        <div className="p-6 pt-2 overflow-y-auto max-h-[85vh]">
+
+          {/* --- STEP 1: MAIN MENU --- */}
+          {currentStep === 'menu' && (
+            <div className="animate-fadeIn">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 drop-shadow-sm mix-blend-hard-light">How can we help?</h2>
+                <button onClick={closeSheet} className="p-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
+                  <X size={20} className="text-gray-700" />
+                </button>
+              </div>
+
+              {/* Menu List */}
+              <div className="space-y-3">
+                {MAIN_MENU_ITEMS.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => item.targetStep && goToStep(item.targetStep)}
+                    className="flex items-start p-4 bg-white/20 backdrop-blur-lg border border-white/40 hover:bg-white/30 active:bg-white/40 rounded-3xl cursor-pointer transition-all group shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.1)]"
+                    style={{
+                         background: 'linear-gradient(145deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))',
+                    }}
+                  >
+                    <div className="bg-white/60 p-3 rounded-full shadow-sm mr-4 group-hover:shadow-md transition-shadow backdrop-blur-md">
+                      <item.icon size={24} className="text-gray-800" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 mb-1 mix-blend-hard-light">{item.title}</h3>
+                      <p className="text-sm text-gray-700 leading-snug mix-blend-hard-light">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* --- STEP 2A: CHOOSE AREAS --- */}
+          {currentStep === 'chooseAreas' && (
+            <div className="animate-fadeIn">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <button onClick={goBack} className="p-2 -ml-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
+                  <ChevronLeft size={24} className="text-gray-800" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 drop-shadow-sm mix-blend-hard-light">Choose Areas</h2>
+                <button onClick={closeSheet} className="p-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
+                   <X size={20} className="text-gray-700" />
+                </button>
+              </div>
+
+              {/* Selection List */}
+              <div className="space-y-2 mb-8">
+                {AREA_ITEMS.map((item) => {
+                  const isSelected = selectedAreas.includes(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => toggleArea(item.id)}
+                      className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all border ${isSelected ? 'bg-white/40 border-white/60 shadow-md' : 'bg-white/10 border-white/20 hover:bg-white/20'} backdrop-blur-md`}
+                    >
+                      <div className="flex items-center">
+                        <item.icon size={24} className={`mr-4 ${isSelected ? 'text-indigo-700 drop-shadow-sm' : 'text-gray-600'}`} />
+                        <span className={`text-lg font-medium ${isSelected ? 'text-gray-900' : 'text-gray-800'} mix-blend-hard-light`}>
+                          {item.label}
+                        </span>
+                      </div>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-500 scale-110 shadow-lg border-none' : 'border-2 border-white/50 bg-white/20'}`}>
+                        {isSelected && <Check size={16} className="text-white" />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer Button */}
+              <button
+                disabled={selectedAreas.length === 0}
+                className={`w-full py-4 rounded-full font-bold text-lg transition-all duration-300 backdrop-blur-xl border border-white/40 shadow-lg ${
+                  selectedAreas.length > 0
+                    ? 'bg-indigo-600/80 text-white hover:scale-[1.02] active:scale-[0.98] hover:bg-indigo-700/90'
+                    : 'bg-white/20 text-gray-500/70 cursor-not-allowed'
+                }`}
+              >
+                Continue
+              </button>
+            </div>
+          )}
+
+          {/* --- STEP 2B: REPORT BUG --- */}
+          {currentStep === 'reportBug' && (
+            <div className="animate-fadeIn">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <button onClick={goBack} className="p-2 -ml-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
+                  <ChevronLeft size={24} className="text-gray-800" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 drop-shadow-sm mix-blend-hard-light">Report a Bug</h2>
+                <button onClick={closeSheet} className="p-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
+                   <X size={20} className="text-gray-700" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4 mb-8">
+                <div>
+                    <label className="block text-sm font-medium text-gray-800 mb-1 ml-1 drop-shadow-sm mix-blend-hard-light">Subject</label>
+                    <input
+                      type="text"
+                      placeholder="Brief summary of the issue"
+                      value={bugSubject}
+                      onChange={(e) => setBugSubject(e.target.value)}
+                      className="w-full p-4 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600 text-gray-900 shadow-inner"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-800 mb-1 ml-1 drop-shadow-sm mix-blend-hard-light">Description</label>
+                    <textarea
+                      rows={4}
+                      placeholder="Describe the issue in more detail, including steps to reproduce"
+                      className="w-full p-4 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 focus:ring-2 focus:ring-indigo-500/50 outline-none resize-none transition-all placeholder-gray-600 text-gray-900 shadow-inner"
+                    ></textarea>
+                </div>
+              </div>
+
+              {/* Footer Button */}
+              <button
+                disabled={bugSubject.length === 0}
+                 className={`w-full py-4 rounded-full font-bold text-lg transition-all duration-300 backdrop-blur-xl border border-white/40 shadow-lg ${
+                  bugSubject.length > 0
+                    ? 'bg-indigo-600/80 text-white hover:scale-[1.02] active:scale-[0.98] hover:bg-indigo-700/90'
+                    : 'bg-white/20 text-gray-500/70 cursor-not-allowed'
+                }`}
+              >
+                Continue
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+      
+      {/* Simple keyframe animation for fade-in effect when switching steps */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default App;
