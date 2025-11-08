@@ -11,12 +11,26 @@
 export function isLoginRequired(): boolean {
   const requireLogin = process.env.EXPO_PUBLIC_REQUIRE_LOGIN;
   
+  // Debug logging
+  if (__DEV__) {
+    console.log('[isLoginRequired] EXPO_PUBLIC_REQUIRE_LOGIN:', requireLogin);
+    console.log('[isLoginRequired] Type:', typeof requireLogin);
+  }
+  
   // If not set, default to true (require login by default)
-  if (requireLogin === undefined) {
+  if (requireLogin === undefined || requireLogin === null) {
+    if (__DEV__) {
+      console.log('[isLoginRequired] Variable not set, defaulting to true');
+    }
     return true;
   }
   
   // Case-insensitive comparison
-  return requireLogin.toLowerCase() !== 'false';
+  const result = requireLogin.toLowerCase() !== 'false';
+  if (__DEV__) {
+    console.log('[isLoginRequired] Result:', result);
+  }
+  
+  return result;
 }
 

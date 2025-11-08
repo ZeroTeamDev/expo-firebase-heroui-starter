@@ -154,7 +154,7 @@ export function AppHeader({
             },
           ]}
         />
-        <View style={[styles.content, { minHeight: 44, paddingTop: 4 }]}>
+        <View style={[styles.content, { minHeight: 40, paddingTop: 2 }]}>
           {/* Left Section: Back + Title */}
           <View style={styles.leftSection}>
             {shouldShowBack && (
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 4,
     position: "relative",
     zIndex: 1,
   },

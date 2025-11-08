@@ -94,6 +94,13 @@ function AppContent() {
 
   const { user, loading } = useAuth();
   const loginRequired = isLoginRequired();
+  
+  // Debug logging
+  if (__DEV__) {
+    console.log('[AppContent] User:', !!user, user?.email);
+    console.log('[AppContent] Loading:', loading);
+    console.log('[AppContent] Login Required:', loginRequired);
+  }
 
   // If user is already logged in, redirect to home immediately
   // This ensures users with persisted sessions go straight to the app

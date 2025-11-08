@@ -5,13 +5,25 @@ import React from "react";
 import { LiquidTabBar } from "@/components/layout/LiquidTabBar";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useAuthStore } from "@/stores/authStore";
+import { isLoginRequired } from "@/utils/auth";
 // modules are now showcased inside screens, tabs are static
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
+  const loginRequired = isLoginRequired();
 
-  if (!user) {
+  // Debug logging
+  if (__DEV__) {
+    console.log('[TabLayout] User:', !!user, user?.email);
+    console.log('[TabLayout] Login Required:', loginRequired);
+  }
+
+  // Only redirect to login if login is required and user is not logged in
+  if (loginRequired && !user) {
+    if (__DEV__) {
+      console.log('[TabLayout] Redirecting to login (login required and no user)');
+    }
     return <Redirect href="/auth/login" />;
   }
 

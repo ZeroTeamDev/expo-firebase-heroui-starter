@@ -20,12 +20,8 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Animated, {
   useSharedValue,
-  withSpring,
   useAnimatedStyle,
   withTiming,
-  interpolate,
-  Extrapolate,
-  withRepeat,
   Easing,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
@@ -96,38 +92,32 @@ const TAB_BAR_THEMES: Record<
 const GLASS_CONFIG = {
   blurIntensity: 40, // Light blur to show content below while maintaining glass effect
   overlayOpacity: 0.25, // Very transparent white overlay to show content below
-  bubbleOpacity: 0.2, // Very transparent bubble (like HTML rgba(255,255,255,0.2))
-  borderOpacity: 0.5, // Subtle border
+  bubbleBlurIntensity: 60, // Moderate blur - enough for glass effect but still transparent
+  bubbleOpacity: 0.05, // Very low white opacity - just a hint, mostly transparent
+  borderOpacity: 0.4, // Border opacity
   tabBarHeight: 64, // Fixed height for pill shape
   horizontalMargin: 20, // Side margins
   bottomMargin: -10, // Bottom margin
   bubblePadding: 4, // Minimal padding to keep bubble inside tab bar (was 20)
 };
 
-// Spring animation config - optimized for smooth sliding (like CSS cubic-bezier)
-const SPRING_CONFIG = {
-  damping: 15, // Reduced for more bounce (like cubic-bezier(0.68, -0.55, 0.27, 1.55))
-  stiffness: 180,
-  mass: 0.8,
-};
+// Spectrum gradient colors for liquid glass bubble - very subtle tint
+// Very low opacity to allow background to show through
+const SPECTRUM_GRADIENT_COLORS = [
+  "rgba(255, 100, 180, 0.04)", // Magenta/Pink - very subtle tint
+  "rgba(255, 160, 0, 0.04)", // Orange - very subtle tint
+  "rgba(255, 220, 0, 0.04)", // Yellow - very subtle tint
+  "rgba(100, 220, 100, 0.04)", // Lime Green - very subtle tint
+  "rgba(50, 220, 220, 0.04)", // Cyan - very subtle tint
+  "rgba(80, 170, 255, 0.04)", // Dodger Blue - very subtle tint
+  "rgba(180, 140, 240, 0.04)", // Medium Purple - very subtle tint
+];
 
 // Timing config for smooth transitions (equivalent to CSS transition)
 const TIMING_CONFIG = {
   duration: 500, // Match CSS transition duration
   easing: Easing.bezier(0.68, -0.55, 0.27, 1.55), // Match CSS cubic-bezier
 };
-
-// Spectrum/rainbow colors for liquid bubble
-const SPECTRUM_COLORS = [
-  "#FF0080", // Magenta
-  "#FF8C00", // Orange
-  "#FFD700", // Yellow
-  "#32CD32", // Lime
-  "#00CED1", // Dark Turquoise
-  "#1E90FF", // Dodger Blue
-  "#9370DB", // Medium Purple
-  "#FF0080", // Magenta (complete loop)
-];
 
 // Liquid Glass Bubble - Inspired by HTML example with smooth sliding animation
 function LiquidGlassBubble({
@@ -252,30 +242,72 @@ function LiquidGlassBubble({
       ]}
       pointerEvents="none" // Don't block touch events - let them pass through to tab items
     >
-      {/* Glass morphism background - Very transparent like HTML example */}
+      {/* Glass morphism background with strong blur */}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <BlurView
-          intensity={60} // Reduced blur for more transparency
+          intensity={GLASS_CONFIG.bubbleBlurIntensity} // Stronger blur for liquid glass effect
           tint="light"
           style={StyleSheet.absoluteFill}
         />
       </View>
 
-      {/* Glass overlay - Very transparent (like HTML rgba(255,255,255,0.2)) */}
+      {/* Very subtle white base - mostly transparent to show background */}
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
           glassBorderRadiusStyle,
           {
-            backgroundColor: `rgba(255, 255, 255, ${GLASS_CONFIG.bubbleOpacity})`, // Very transparent
+            backgroundColor: `rgba(255, 255, 255, ${GLASS_CONFIG.bubbleOpacity})`,
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Spectrum gradient overlay - very subtle colorful tint */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, glassBorderRadiusStyle]}
+        pointerEvents="none"
+      >
+        <LinearGradient
+          colors={SPECTRUM_GRADIENT_COLORS as [string, string, ...string[]]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
+      {/* Glass overlay with borders and subtle shadows */}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          glassBorderRadiusStyle,
+          {
             borderWidth: 1,
-            borderColor: `rgba(255, 255, 255, ${GLASS_CONFIG.borderOpacity})`, // Subtle border
-            // Subtle shadow for depth
+            borderColor: `rgba(255, 255, 255, ${GLASS_CONFIG.borderOpacity})`,
+            // Very subtle shadow for depth - not blocking background
             shadowColor: "#000",
-            shadowOffset: { width: 2, height: 2 },
-            shadowRadius: 5,
-            shadowOpacity: 0.05, // Very subtle shadow
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.08,
             elevation: 2, // Android shadow
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Very subtle highlight effect at top */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: "absolute",
+            top: 2,
+            left: "30%",
+            right: "30%",
+            height: "25%",
+            backgroundColor: "rgba(255, 255, 255, 0.2)",
+            borderRadius: 10,
+            opacity: 0.4,
           },
         ]}
       />
@@ -307,21 +339,23 @@ function TabItem({
   tabBarRef,
   tabIndex,
 }: TabItemProps) {
-  const scale = useSharedValue(isFocused ? 1 : 0);
+  // Remove scale animation - only use opacity for smooth fade
+  const activeOpacity = useSharedValue(isFocused ? 1 : 0);
   const inactiveOpacity = useSharedValue(isFocused ? 0 : 1);
   const didMountRef = useRef(false);
 
   useEffect(() => {
     if (!didMountRef.current) {
-      scale.value = isFocused ? 1 : 0;
+      activeOpacity.value = isFocused ? 1 : 0;
       inactiveOpacity.value = isFocused ? 0 : 1;
       didMountRef.current = true;
       return;
     }
 
-    scale.value = withSpring(isFocused ? 1 : 0, SPRING_CONFIG);
+    // Smooth fade transition without zoom
+    activeOpacity.value = withTiming(isFocused ? 1 : 0, { duration: 200 });
     inactiveOpacity.value = withTiming(isFocused ? 0 : 1, { duration: 200 });
-  }, [isFocused, scale, inactiveOpacity]);
+  }, [isFocused, activeOpacity, inactiveOpacity]);
 
   const wrapperRef = useRef<View>(null);
   const layoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -472,29 +506,20 @@ function TabItem({
   }, []);
 
   const animatedCircleStyle = useAnimatedStyle(() => {
-    const s = scale.value;
+    const opacity = activeOpacity.value;
 
-    if (s < 0.05) {
-      return {
-        transform: [{ scale: 0 }],
-        opacity: 0,
-        shadowOpacity: 0,
-        backgroundColor: "rgba(255,255,255,0)",
-      };
-    }
-
-    const bgAlpha = interpolate(s, [0.05, 0.5, 1], [0, 0.9, 1]);
+    // No scale transform - transparent background to show liquid glass bubble
+    // Liquid glass bubble provides the visual effect, active circle is just for icon/label
     return {
-      transform: [{ scale: s }],
-      opacity: interpolate(s, [0.05, 0.5, 1], [0, 0, 1]),
-      shadowOpacity: interpolate(s, [0.05, 0.5, 1], [0, 0, 0.15]),
-      backgroundColor: `rgba(255,255,255,${bgAlpha})`,
+      opacity: opacity,
+      // No background color - let liquid glass bubble show through
+      backgroundColor: "transparent",
     };
   });
 
   const animatedInactiveStyle = useAnimatedStyle(() => {
     return {
-      opacity: interpolate(scale.value, [0, 0.5, 1], [1, 1, 0]),
+      opacity: inactiveOpacity.value,
     };
   });
 
@@ -732,8 +757,7 @@ export function GlassTabBar({
           pointerEvents="none" // Don't block touch events
         />
 
-        {/* Liquid glass bubble - smooth sliding indicator */}
-        {/* Wrapper with strict overflow clipping to prevent bubble from extending outside */}
+        {/* Liquid glass bubble - Render FIRST with low z-index (stays behind) */}
         <View
           style={{
             position: "absolute",
@@ -743,7 +767,7 @@ export function GlassTabBar({
             height: GLASS_CONFIG.tabBarHeight, // Strict height limit
             overflow: "hidden", // Clip any overflow
             borderRadius: pillBorderRadius, // Match tab bar border radius
-            zIndex: 1, // Below tab items
+            zIndex: 1, // Below tab items (zIndex: 20+)
           }}
           pointerEvents="none" // Don't block touch events - let them pass through to tab items
         >
@@ -753,7 +777,7 @@ export function GlassTabBar({
           />
         </View>
 
-        {/* Tab items */}
+        {/* Tab items - Render LAST with high z-index (stays on top) */}
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
@@ -785,6 +809,7 @@ const styles = StyleSheet.create({
   tabItemWrapper: {
     flex: 1,
     position: "relative",
+    zIndex: 20, // High z-index to ensure tab items are always above bubble
   },
   tabItemContainer: {
     flex: 1,
@@ -793,7 +818,8 @@ const styles = StyleSheet.create({
     position: "relative",
     paddingVertical: 8,
     minHeight: 48,
-    zIndex: 10,
+    zIndex: 20, // High z-index - ensure container is above bubble
+    elevation: 10, // Android elevation to ensure it's on top
   },
   inactiveContainer: {
     position: "absolute",
@@ -801,27 +827,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
     height: "100%",
-    zIndex: 2,
+    zIndex: 21, // Above bubble
+    elevation: 11, // Android elevation
   },
   activeTabCircle: {
     position: "absolute",
     minWidth: 56,
     minHeight: 48,
     borderRadius: 24,
-    backgroundColor: "white",
+    backgroundColor: "transparent", // Transparent to show liquid glass bubble
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 3,
+    zIndex: 25, // Very high - ensure icon and text are clearly visible above bubble
+    elevation: 15, // Android elevation - ensure it's on top
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: "600",
     marginTop: 2,
+    // Ensure text is clearly visible with subtle shadow
+    textShadowColor: "rgba(255, 255, 255, 0.8)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
