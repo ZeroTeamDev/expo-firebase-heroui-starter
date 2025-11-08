@@ -18,6 +18,9 @@ import { useRemoteConfigStore } from "@/stores/remoteConfigStore";
 import { getFirebaseApp } from "@/integrations/firebase.client";
 import AuthProvider, { useAuth } from "@/providers/AuthProvider";
 import { isLoginRequired } from "@/utils/auth";
+import { ToastProvider } from "@/components/feedback/Toast";
+import { useNotificationStore } from "@/stores/notificationStore";
+import { mockNotifications } from "@/app/modules/examples/notification-example/data";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -30,6 +33,7 @@ function AppContent() {
     (state) => state.syncModulesWithRemoteConfig
   );
   const updateFlags = useRemoteConfigStore((state) => state.updateFlags);
+  const setNotifications = useNotificationStore((state) => state.setNotifications);
 
   useEffect(() => {
     let isMounted = true;
@@ -55,6 +59,12 @@ function AppContent() {
         // Sync modules with Remote Config feature flags
         syncModulesWithRemoteConfig(featureFlags);
 
+        // Initialize notification store with mock data
+        const notificationStore = useNotificationStore.getState();
+        if (notificationStore.notifications.length === 0) {
+          setNotifications(mockNotifications);
+        }
+
         // Hide the splash screen
         SplashScreen.hideAsync();
       } catch (error) {
@@ -62,7 +72,14 @@ function AppContent() {
         if (!isMounted) return;
         // Even if Remote Config fails, still initialize modules
         initializeModules();
-    SplashScreen.hideAsync();
+        
+        // Initialize notification store even on error
+        const notificationStore = useNotificationStore.getState();
+        if (notificationStore.notifications.length === 0) {
+          setNotifications(mockNotifications);
+        }
+        
+        SplashScreen.hideAsync();
       }
     };
 
@@ -219,15 +236,17 @@ export default function RootLayout() {
             },
           }}
         >
-          <GestureHandlerRootView>
-            <NotifierWrapper>
-              <AuthProvider>
-                <AppContent />
-              </AuthProvider>
-            </NotifierWrapper>
-          </GestureHandlerRootView>
+          <ToastProvider>
+            <GestureHandlerRootView>
+              <NotifierWrapper>
+                <AuthProvider>
+                  <AppContent />
+                </AuthProvider>
+              </NotifierWrapper>
+            </GestureHandlerRootView>
 
-          <StatusBar style="auto" />
+            <StatusBar style="auto" />
+          </ToastProvider>
         </HeroUINativeProvider>
       </KeyboardProvider>
     </SafeAreaProvider>

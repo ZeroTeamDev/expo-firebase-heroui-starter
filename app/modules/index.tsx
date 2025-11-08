@@ -30,6 +30,18 @@ const modules = [
     description: 'Learn how to use AI services: chat, vision, speech, and embeddings',
     route: '/modules/examples/ai-example',
   },
+  {
+    id: 'ui-components-example',
+    title: 'UI Components Library',
+    description: 'Browse reusable data tables, lists, cards, and grids with live playgrounds',
+    route: '/modules/examples/ui-components-example',
+  },
+  {
+    id: 'notification-example',
+    title: 'Notification Example',
+    description: 'Complete notification system with inbox, settings, filtering, and push notification UI',
+    route: '/modules/examples/notification-example',
+  },
 ];
 
 export default function ModulesIndexScreen() {

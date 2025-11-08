@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { getDefaultModuleIcon } from "@/modules/icon-map";
 import { AIChip, AIStreaming } from "@/components/ai";
+import { DataCard } from "@/components/data";
 
 export default function MyComponent() {
   const { colors } = useTheme();
@@ -92,11 +93,22 @@ export default function MyComponent() {
             >
               Previews
             </Text>
-            <TouchableOpacity
-              onPress={() => router.push("/modules/examples/ai-example" as any)}
-            >
-              <Text style={{ color: colors.accent }}>Open AI Examples →</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push("/modules/examples/ui-components-example" as any)
+                }
+              >
+                <Text style={{ color: colors.accent }}>UI Components →</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push("/modules/examples/ai-example" as any)
+                }
+              >
+                <Text style={{ color: colors.accent }}>AI Examples →</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
@@ -120,6 +132,33 @@ export default function MyComponent() {
                 isStreaming={false}
                 title="Preview"
               />
+            </GlassCard>
+
+            {/* UI Data Preview */}
+            <GlassCard style={{ width: 160, padding: 12, gap: 10 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                Data Card
+              </Text>
+              <View style={{ gap: 8 }}>
+                <DataCard
+                  title="Experiment backlog"
+                  subtitle="Growth team"
+                  description="12 active experiments • 6 owners"
+                  condensed
+                  badges={[
+                    {
+                      label: "Live",
+                      color: "rgba(99,102,241,0.14)",
+                      textColor: "#4338ca",
+                    },
+                  ]}
+                  metadata={[{ label: "Updated", value: "2h ago" }]}
+                  style={{
+                    borderWidth: 0,
+                    backgroundColor: "rgba(148,163,184,0.12)",
+                  }}
+                />
+              </View>
             </GlassCard>
           </View>
         </View>

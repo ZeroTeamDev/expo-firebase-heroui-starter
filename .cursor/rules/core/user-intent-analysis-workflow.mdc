@@ -195,6 +195,8 @@ integration_points:
 ```yaml
 skip_analysis_when:
   - user_explicitly_requests_skip: "User says 'just do it' or similar"
+  - user_explicitly_requests_continue: "User says 'continue', 'do not stop', 'work through all tasks', 'làm lần lượt', etc."
+  - todo_list_provided: "When user provides explicit todo list and requests sequential execution without stops"
   - emergency_fix: "Critical production issue"
   - simple_typo_fix: "Obvious typo or formatting"
   - follow_up_clarification: "User is clarifying previous request"
@@ -203,6 +205,7 @@ minimal_analysis_when:
   - straightforward_request: "Very clear and simple request"
   - repeated_pattern: "Similar request done before"
   - user_is_expert: "User demonstrates deep technical knowledge"
+  - sequential_task_execution: "When working through a predefined list of tasks in order"
 ```
 
 ## Quality Assurance

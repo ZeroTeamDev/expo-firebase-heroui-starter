@@ -27,6 +27,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ThemeToggle } from "./ThemeToggle";
 import { ProfileDropdown } from "./ProfileDropdown";
 import { SearchCommandBar } from "./SearchCommandBar";
+import { NotificationIcon } from "./NotificationIcon";
 
 export interface AppHeaderProps {
   title?: string;
@@ -36,6 +37,8 @@ export interface AppHeaderProps {
   onSearchPress?: () => void;
   showProfile?: boolean;
   showThemeToggle?: boolean;
+  showNotifications?: boolean;
+  onNotificationPress?: () => void;
   rightActions?: React.ReactNode;
   blurIntensity?: number;
   opacity?: number;
@@ -52,6 +55,8 @@ export function AppHeader({
   onSearchPress,
   showProfile = true,
   showThemeToggle = true,
+  showNotifications = true,
+  onNotificationPress,
   rightActions,
   blurIntensity = 30,
   opacity = 0.75,
@@ -114,7 +119,7 @@ export function AppHeader({
         style={[
           styles.container,
           {
-            paddingTop: Math.max(insets.top - 15, 0), // Reduce top spacing
+            paddingTop: Math.max(insets.top - 10, 0), // Reduced top spacing
           },
         ]}
       >
@@ -149,7 +154,7 @@ export function AppHeader({
             },
           ]}
         />
-        <View style={[styles.content, { minHeight: 56, paddingTop: 8 }]}>
+        <View style={[styles.content, { minHeight: 44, paddingTop: 4 }]}>
           {/* Left Section: Back + Title */}
           <View style={styles.leftSection}>
             {shouldShowBack && (
@@ -182,6 +187,10 @@ export function AppHeader({
           {/* Right Section: Actions */}
           <View style={styles.rightSection}>
             {rightActions}
+
+            {showNotifications && (
+              <NotificationIcon size={22} onPress={onNotificationPress} />
+            )}
 
             {showSearch && (
               <AnimatedTouchableOpacity
@@ -264,8 +273,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 26, // Increased from 16 to match bottom nav + 10px
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
     position: "relative",
     zIndex: 1,
   },
@@ -291,7 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
     flexShrink: 1,
     minWidth: 0,

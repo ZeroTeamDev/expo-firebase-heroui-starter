@@ -16,9 +16,10 @@ export default function TabLayout() {
   }
 
   // Always render static tabs; modules are accessed within screens
+  // You can change tabBarTheme to: "blue", "pink", "red", "yellow", "green", "purple", "orange", "cyan", or "default"
   return (
     <Tabs
-      tabBar={(props) => <LiquidTabBar {...props} />}
+      tabBar={(props) => <LiquidTabBar {...props} tabBarTheme="blue" />}
       screenOptions={{
         tabBarActiveTintColor: colorKit.HEX(colors.accent),
         tabBarInactiveTintColor: colorKit.HEX(colors.mutedForeground),

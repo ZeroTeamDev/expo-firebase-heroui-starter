@@ -277,9 +277,9 @@ export default function AIExampleScreen() {
                 <Text style={[styles.voiceLabel, { color: colors.foreground }]}>Voice capture</Text>
                 <Text style={[styles.voiceStatus, { color: colors.mutedForeground }]}>
                   {voiceLoading ? 'Transcribing audio…' : voiceTranscript ? `Last prompt: ${voiceTranscript}` : 'Hold the chip to talk'}
-                </Text>
-              </View>
-            </View>
+                  </Text>
+                </View>
+                </View>
 
             <AIConversation
               conversationId={conversationId}

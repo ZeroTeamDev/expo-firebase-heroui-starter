@@ -18,8 +18,8 @@ Created by Kien AI (leejungkiin@gmail.com)
 - [x] Demo updated AI example module with new UX
 
 ## Phase 12 — UI Components Library
-- [ ] Finish all tasks in `phase12-ui.md`
-- [ ] Publish updated `docs/ui-components.md`
+- [x] Finish all tasks in `phase12-ui.md`
+- [x] Publish updated `docs/ui-components.md`
 
 ## Phase 13 — Developer Experience
 - [ ] Scaffold CLI generators for modules/components/services/screens

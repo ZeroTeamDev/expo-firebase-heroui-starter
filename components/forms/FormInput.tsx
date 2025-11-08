@@ -18,6 +18,9 @@ export interface FormInputProps extends TextInputProps {
   labelStyle?: TextStyle;
   errorStyle?: TextStyle;
   helperStyle?: TextStyle;
+  leadingAdornment?: React.ReactNode;
+  trailingAdornment?: React.ReactNode;
+  showCharacterCount?: boolean;
 }
 
 export function FormInput({
@@ -29,11 +32,27 @@ export function FormInput({
   labelStyle,
   errorStyle,
   helperStyle,
+  leadingAdornment,
+  trailingAdornment,
+  showCharacterCount = false,
   style,
   ...props
 }: FormInputProps) {
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+  const maxLength = props.maxLength;
+  const [valueLength, setValueLength] = React.useState(props.value ? String(props.value).length : 0);
+
+  React.useEffect(() => {
+    if (props.value !== undefined) {
+      setValueLength(String(props.value ?? '').length);
+    }
+  }, [props.value]);
+
+  const handleChangeText = (text: string) => {
+    setValueLength(text.length);
+    props.onChangeText?.(text);
+  };
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -42,20 +61,31 @@ export function FormInput({
           {label}
         </Text>
       )}
-      <TextInput
+      <View
         style={[
-          styles.input,
+          styles.inputWrapper,
           {
             backgroundColor: colors.card || colors.background,
-            color: colors.foreground,
             borderColor: error ? colors.danger : colors.border || colors.muted,
           },
-          inputStyle,
-          style,
         ]}
-        placeholderTextColor={colors.mutedForeground || (isDark ? '#666' : '#999')}
-        {...props}
-      />
+      >
+        {leadingAdornment ? <View style={styles.leading}>{leadingAdornment}</View> : null}
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: colors.foreground,
+            },
+            inputStyle,
+            style,
+          ]}
+          placeholderTextColor={colors.mutedForeground || (isDark ? '#666' : '#999')}
+          {...props}
+          onChangeText={handleChangeText}
+        />
+        {trailingAdornment ? <View style={styles.trailing}>{trailingAdornment}</View> : null}
+      </View>
       {error && (
         <Text style={[styles.error, { color: colors.danger }, errorStyle]}>{error}</Text>
       )}
@@ -64,6 +94,18 @@ export function FormInput({
           {helperText}
         </Text>
       )}
+      {showCharacterCount && maxLength ? (
+        <Text
+          style={{
+            color: colors.mutedForeground || (isDark ? '#94a3b8' : '#64748b'),
+            fontSize: 11,
+            textAlign: 'right',
+            marginTop: 4,
+          }}
+        >
+          {valueLength}/{maxLength}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -77,10 +119,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  input: {
+  inputWrapper: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  leading: {
+    marginRight: 10,
+  },
+  trailing: {
+    marginLeft: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
     fontSize: 16,
   },
   error: {
