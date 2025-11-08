@@ -6,20 +6,21 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card, useTheme } from 'heroui-native';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useScreenTracking } from '@/hooks/use-analytics';
 import { useAuthStore } from '@/stores/authStore';
 import { logout } from '@/integrations/firebase.client';
+import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { colors, theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { colors } = useTheme();
   useScreenTracking('home');
   const user = useAuthStore((s) => s.user);
+  const bottomPadding = useTabBarPadding();
 
   const quickLinks = [
     {
@@ -53,7 +54,7 @@ export default function HomeScreen() {
       <AppHeader title="Home" />
       <ScrollView 
         style={styles.scrollView} 
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Auth status panel for testing */}
@@ -137,7 +138,7 @@ export default function HomeScreen() {
             <Text style={[styles.infoText, { color: colors.foreground }]}>
               • Explore the examples to see how services work{'\n'}
               • Check the documentation in the docs/ folder{'\n'}
-              • Use the unified services import: import from '@/services'{'\n'}
+              • Use the unified services import: import from &apos;@/services&apos;{'\n'}
               • All services have auto error handling and retry logic
             </Text>
           </Card.Body>

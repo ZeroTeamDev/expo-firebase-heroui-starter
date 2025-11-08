@@ -8,15 +8,20 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { getDefaultModuleIcon } from "@/modules/icon-map";
 import { AIChip, AIStreaming } from "@/components/ai";
 import { DataCard } from "@/components/data";
+import { useTabBarPadding } from "@/hooks/use-tab-bar-padding";
 
 export default function MyComponent() {
   const { colors } = useTheme();
   const router = useRouter();
   const modules = useModules();
+  const bottomPadding = useTabBarPadding();
 
   return (
     <ThemeView className="flex-1 w-full">
-      <ScrollView className="flex-1 p-4">
+      <ScrollView 
+        className="flex-1 p-4"
+        contentContainerStyle={{ paddingBottom: bottomPadding }}
+      >
         <View className="mb-4">
           <Text
             style={{ color: colors.foreground }}
