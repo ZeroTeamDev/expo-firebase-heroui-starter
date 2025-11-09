@@ -11,7 +11,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import "@/app/globals.css";
 
 import { HeroUINativeProvider } from "heroui-native";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useModuleStore } from "@/stores/moduleStore";
 import { initRemoteConfig, fetchRemoteConfig } from "@/services/remote-config";
 import { useRemoteConfigStore } from "@/stores/remoteConfigStore";
@@ -21,6 +21,7 @@ import { isLoginRequired } from "@/utils/auth";
 import { ToastProvider } from "@/components/feedback/Toast";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { mockNotifications } from "@/app/modules/examples/notification-example/data";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -150,99 +151,109 @@ function AppContent() {
   );
 }
 
+function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const theme = useSettingsStore((state) => state.theme);
+
+  return (
+    <HeroUINativeProvider
+      config={{
+        colorScheme: theme,
+        theme: {
+          light: {
+            colors: {
+              // Base colors
+              background: "#FFFFFF",
+              foreground: "#11181C",
+              default: "#FEFEFE",
+
+              // Semantic colors
+              surface: "#FFFFFF",
+              surfaceForeground: "#11181C",
+              panel: "#FFFFFF",
+
+              // Accent colors
+              accent: "#006FEE",
+              accentForeground: "#FFFFFF",
+
+              // Status colors
+              success: "#17C964",
+              successForeground: "#FFFFFF",
+              warning: "#F5A524",
+              warningForeground: "#000000",
+              danger: "#F31260",
+              dangerForeground: "#FFFFFF",
+
+              // Muted colors
+              muted: "#F4F4F5",
+              mutedForeground: "#71717A",
+
+              // Border and divider
+              border: "#E4E4E7",
+              divider: "#E4E4E7",
+
+              // Link
+              link: "#006FEE",
+
+              // Additional surfaces
+              surface1: "#FFFFFF",
+              surface2: "#F4F4F5",
+              surface3: "#E4E4E7",
+            },
+          },
+          dark: {
+            colors: {
+              // Base colors
+              background: "#000000",
+              foreground: "#ECEDEE",
+              default: "#121212", // Input non focused bg
+
+              // Semantic colors
+              surface: "#111111",
+              surfaceForeground: "#ECEDEE",
+              panel: "#111111",
+
+              // Accent colors
+              accent: "#006FEE",
+              accentForeground: "#FFFFFF",
+
+              // Status colors
+              success: "#17C964",
+              successForeground: "#FFFFFF",
+              warning: "#F5A524",
+              warningForeground: "#000000",
+              danger: "#F31260",
+              dangerForeground: "#FFFFFF",
+
+              // Muted colors
+              muted: "#191919",
+              mutedForeground: "#A1A1AA",
+
+              // Border and divider
+              border: "#27272A",
+              divider: "#27272A",
+
+              // Link
+              link: "#006FEE",
+
+              // Additional surfaces
+              surface1: "#080808",
+              surface2: "#191919",
+              surface3: "#27272A",
+            },
+          },
+        },
+      }}
+    >
+      {children}
+    </HeroUINativeProvider>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <KeyboardProvider>
-        <HeroUINativeProvider
-          config={{
-            colorScheme: "system",
-            theme: {
-              light: {
-                colors: {
-                  // Base colors
-                  background: "#FFFFFF",
-                  foreground: "#11181C",
-                  default: "#FEFEFE",
-
-                  // Semantic colors
-                  surface: "#FFFFFF",
-                  surfaceForeground: "#11181C",
-                  panel: "#FFFFFF",
-
-                  // Accent colors
-                  accent: "#006FEE",
-                  accentForeground: "#FFFFFF",
-
-                  // Status colors
-                  success: "#17C964",
-                  successForeground: "#FFFFFF",
-                  warning: "#F5A524",
-                  warningForeground: "#000000",
-                  danger: "#F31260",
-                  dangerForeground: "#FFFFFF",
-
-                  // Muted colors
-                  muted: "#F4F4F5",
-                  mutedForeground: "#71717A",
-
-                  // Border and divider
-                  border: "#E4E4E7",
-                  divider: "#E4E4E7",
-
-                  // Link
-                  link: "#006FEE",
-
-                  // Additional surfaces
-                  surface1: "#FFFFFF",
-                  surface2: "#F4F4F5",
-                  surface3: "#E4E4E7",
-                },
-              },
-              dark: {
-                colors: {
-                  // Base colors
-                  background: "#000000",
-                  foreground: "#ECEDEE",
-                  default: "#121212", // Input non focused bg
-
-                  // Semantic colors
-                  surface: "#111111",
-                  surfaceForeground: "#ECEDEE",
-                  panel: "#111111",
-
-                  // Accent colors
-                  accent: "#006FEE",
-                  accentForeground: "#FFFFFF",
-
-                  // Status colors
-                  success: "#17C964",
-                  successForeground: "#FFFFFF",
-                  warning: "#F5A524",
-                  warningForeground: "#000000",
-                  danger: "#F31260",
-                  dangerForeground: "#FFFFFF",
-
-                  // Muted colors
-                  muted: "#191919",
-                  mutedForeground: "#A1A1AA",
-
-                  // Border and divider
-                  border: "#27272A",
-                  divider: "#27272A",
-
-                  // Link
-                  link: "#006FEE",
-
-                  // Additional surfaces
-                  surface1: "#080808",
-                  surface2: "#191919",
-                  surface3: "#27272A",
-                },
-              },
-            },
-          }}
-        >
+        <ThemeProvider>
           <ToastProvider>
             <GestureHandlerRootView>
               <NotifierWrapper>
@@ -254,7 +265,7 @@ export default function RootLayout() {
 
             <StatusBar style="auto" />
           </ToastProvider>
-        </HeroUINativeProvider>
+        </ThemeProvider>
       </KeyboardProvider>
     </SafeAreaProvider>
   );

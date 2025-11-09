@@ -167,7 +167,15 @@ function ToastCard({ toast, placement, onDismiss }: ToastCardProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const palette = useMemo(() => getVariantPalette(variant, colors, isDark), [variant, colors, isDark]);
+  const palette = useMemo(() => {
+    try {
+      const result = getVariantPalette(variant, colors, isDark);
+      return result || getVariantPalette('default', colors, isDark);
+    } catch (error) {
+      // Fallback to default palette if error
+      return getVariantPalette('default', colors, isDark);
+    }
+  }, [variant, colors, isDark]);
 
   const clearTimeoutRef = () => {
     if (timeoutRef.current) {

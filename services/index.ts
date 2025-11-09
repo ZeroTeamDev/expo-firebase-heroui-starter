@@ -90,3 +90,83 @@ export {
   type GlobalConfig,
 } from './config';
 
+// Permission services
+export {
+  isPermissionSystemEnabled,
+  getUserRole,
+  getUserProfile,
+  canManageUsers,
+  canAssignRole,
+  canAccessFile,
+  canUploadFile,
+  canManageGroup,
+  getUserFileLimit,
+  getUserFileCount,
+  type UserProfile,
+  type UserRole,
+  type FileMetadata,
+  type GroupMetadata,
+} from './permissions';
+
+// User services
+export {
+  createUser,
+  updateUserRole,
+  assignUserToGroup,
+  removeUserFromGroup,
+  getUserProfile as getUserProfileService,
+  listUsers,
+  getUserFileStats,
+  updateUserProfile,
+  incrementUserFileCount,
+  decrementUserFileCount,
+  type CreateUserData,
+  type UpdateUserData,
+  type UserStats,
+} from './users';
+
+// File services
+export {
+  createFileMetadata,
+  uploadFileWithMetadata,
+  updateFileMetadata,
+  getFileMetadata,
+  deleteFile,
+  shareFile,
+  unshareFile,
+  checkFileAccess,
+  getUserFiles,
+  getGroupFiles,
+  getAppFiles,
+  listFiles,
+  type CreateFileData,
+  type FileUploadData,
+} from './files';
+
+// Storage services
+export {
+  uploadFile,
+  getFileUrl,
+  deleteFileFromStorage,
+  validateFileSize,
+  validateFileType,
+  formatFileSize,
+  type UploadFileOptions,
+  type UploadResult,
+} from './storage';
+
+// Group services
+export {
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  addGroupMember,
+  removeGroupMember,
+  getGroup,
+  getUserGroup,
+  listGroups,
+  validateGroupAssignment,
+  type CreateGroupData,
+  type UpdateGroupData,
+} from './groups';
+

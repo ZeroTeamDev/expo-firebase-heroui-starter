@@ -6,12 +6,17 @@ import { LiquidTabBar } from "@/components/layout/LiquidTabBar";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useAuthStore } from "@/stores/authStore";
 import { isLoginRequired } from "@/utils/auth";
+import { useIsAdmin } from "@/hooks/use-permissions";
+import { useFileManagementEnabled, usePermissionsEnabled } from "@/hooks/use-config";
 // modules are now showcased inside screens, tabs are static
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const loginRequired = isLoginRequired();
+  const isAdmin = useIsAdmin();
+  const permissionsEnabled = usePermissionsEnabled();
+  const fileManagementEnabled = useFileManagementEnabled();
 
   // Debug logging
   if (__DEV__) {
@@ -115,6 +120,20 @@ export default function TabLayout() {
           header: () => <AppHeader title="Settings" />,
         }}
       />
+      {(isAdmin || permissionsEnabled) && (
+        <Tabs.Screen
+          name="admin"
+          options={{
+            href: isAdmin ? undefined : null, // Hide from tab bar if not admin
+            title: "Admin",
+            tabBarIcon: ({ color, size }) => (
+              <IconSymbol size={size} name="shield.fill" color={color} />
+            ),
+            headerShown: true,
+            header: () => <AppHeader title="Admin" />,
+          }}
+        />
+      )}
       <Tabs.Screen
         name="profile"
         options={{

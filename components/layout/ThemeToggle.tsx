@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, AccessibilityInfo } from 'react-native';
+import { TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { useTheme } from 'heroui-native';
 import Animated, {
   useSharedValue,
@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useSettingsStore, type ThemeMode } from '@/stores/settingsStore';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -25,8 +26,18 @@ export interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ size = 24, onToggle }: ThemeToggleProps) {
-  const { theme, toggleTheme, colors } = useTheme();
-  const isDark = theme === 'dark';
+  const { theme, colors } = useTheme();
+  const systemColorScheme = useColorScheme();
+  const settingsTheme = useSettingsStore((state) => state.theme);
+  const setTheme = useSettingsStore((state) => state.setTheme);
+  
+  // Determine if we're in dark mode
+  // If theme is 'system', use system color scheme, otherwise use the theme setting
+  const effectiveTheme = settingsTheme === 'system' 
+    ? (systemColorScheme || 'light')
+    : settingsTheme;
+  const isDark = effectiveTheme === 'dark';
+  
   const rotation = useSharedValue(isDark ? 180 : 0);
   const scale = useSharedValue(1);
 
@@ -46,7 +57,21 @@ export function ThemeToggle({ size = 24, onToggle }: ThemeToggleProps) {
       scale.value = withSpring(1, { damping: 10, stiffness: 300 });
     });
 
-    toggleTheme();
+    // Toggle between light and dark
+    // If current theme is system, toggle based on system theme
+    // If current theme is light, switch to dark
+    // If current theme is dark, switch to light
+    let newTheme: ThemeMode;
+    if (settingsTheme === 'system') {
+      // If system, toggle to the opposite of current system theme
+      newTheme = systemColorScheme === 'dark' ? 'light' : 'dark';
+    } else if (settingsTheme === 'light') {
+      newTheme = 'dark';
+    } else {
+      newTheme = 'light';
+    }
+    
+    setTheme(newTheme);
     onToggle?.();
   };
 

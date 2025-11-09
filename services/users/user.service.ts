@@ -12,8 +12,13 @@ import {
   readCollection,
   type QueryFilters,
 } from '@/services/firebase/database';
-import { getUserRole, canAssignRole, type UserRole } from '@/services/permissions/permission.service';
-import type { UserProfile } from '@/services/permissions/permission.service';
+import {
+  getUserRole,
+  getUserProfile as getProfile,
+  type UserRole,
+  type UserProfile,
+} from '@/services/permissions/permission.service';
+import { canAssignRole as canAssignRoleUtil } from '@/utils/permissions';
 
 export interface CreateUserData {
   email: string;
@@ -63,8 +68,18 @@ export async function updateUserRole(
   newRole: UserRole,
   updatedBy: string
 ): Promise<void> {
+  // Get updater's role and target user's current role
+  const [updaterRole, targetUser] = await Promise.all([
+    getUserRole(updatedBy),
+    getProfile(userId),
+  ]);
+
+  if (!targetUser) {
+    throw new Error('Target user not found');
+  }
+
   // Check if updater can assign this role
-  const canAssign = await canAssignRole(updatedBy, userId);
+  const canAssign = canAssignRoleUtil(updaterRole, newRole);
   if (!canAssign) {
     throw new Error('You do not have permission to assign this role');
   }
@@ -144,26 +159,16 @@ export async function removeUserFromGroup(
 }
 
 /**
- * Get user profile
+ * Get user profile (re-export from permission service)
  */
-export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  try {
-    const user = await readDocument<UserProfile>(`users/${userId}`);
-    return user;
-  } catch (error) {
-    if (__DEV__) {
-      console.warn(`[UserService] Failed to get user profile for ${userId}:`, error);
-    }
-    return null;
-  }
-}
+export const getUserProfile = getProfile;
 
 /**
  * List users with filters (admin/moderator only)
  */
-export async function listUsers(filters?: QueryFilters): Promise<UserProfile[]> {
+export async function listUsers(filters?: QueryFilters): Promise<(UserProfile & { id: string })[]> {
   try {
-    const users = await readCollection<UserProfile>('users', filters);
+    const users = await readCollection<UserProfile & { id: string }>('users', filters);
     return users;
   } catch (error) {
     if (__DEV__) {

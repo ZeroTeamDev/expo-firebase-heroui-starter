@@ -15,6 +15,7 @@ import {
   Text,
   useWindowDimensions,
   type LayoutChangeEvent,
+  ScrollView,
 } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
@@ -95,7 +96,7 @@ const GLASS_CONFIG = {
   bubbleBlurIntensity: 60, // Moderate blur - enough for glass effect but still transparent
   bubbleOpacity: 0.05, // Very low white opacity - just a hint, mostly transparent
   borderOpacity: 0.4, // Border opacity
-  tabBarHeight: 64, // Fixed height for pill shape
+  tabBarHeight: 72, // Fixed height for pill shape - increased to accommodate text below icon
   horizontalMargin: 20, // Side margins
   bottomMargin: -10, // Bottom margin
   bubblePadding: 4, // Minimal padding to keep bubble inside tab bar (was 20)
@@ -378,10 +379,10 @@ function TabItem({
               ) {
                 return;
               }
-              const circleWidth = 56;
-              const circleHeight = 48;
+              const circleWidth = 56; // Icon container width
+              const circleHeight = 32; // Icon container height
               const circleX = wrapperX + (wrapperWidth - circleWidth) / 2;
-              const circleY = wrapperY + (wrapperHeight - circleHeight) / 2;
+              const circleY = wrapperY + 8; // Icon container is at top: 8
 
               if (circleX >= 0 && circleY >= 0) {
                 onLayout(
@@ -439,12 +440,12 @@ function TabItem({
                 return; // Invalid layout, don't update
               }
 
-              // Active circle dimensions (from styles - activeTabCircle)
-              const circleWidth = 56; // minWidth from styles
-              const circleHeight = 48; // minHeight from styles
-              // Center the circle in the wrapper
+              // Active circle dimensions - matches iconContainer (56x32)
+              const circleWidth = 56; // Icon container width
+              const circleHeight = 32; // Icon container height
+              // Center the circle horizontally, position at icon container top (8px from wrapper top)
               const circleX = wrapperX + (wrapperWidth - circleWidth) / 2;
-              const circleY = wrapperY + (wrapperHeight - circleHeight) / 2;
+              const circleY = wrapperY + 8; // Icon container is at top: 8
 
               // Update layout - bubble will use these coordinates directly
               if (circleX >= 0 && circleY >= 0) {
@@ -468,10 +469,10 @@ function TabItem({
                 return; // Invalid layout
               }
 
-              const circleWidth = 56;
-              const circleHeight = 48;
+              const circleWidth = 56; // Icon container width
+              const circleHeight = 32; // Icon container height
               const circleX = x + (width - circleWidth) / 2;
-              const circleY = y + (height - circleHeight) / 2;
+              const circleY = y + 8; // Icon container is at top: 8
 
               // Update layout with fallback position
               if (circleX >= 0 && circleY >= 0) {
@@ -565,26 +566,36 @@ function TabItem({
         activeOpacity={0.9}
         style={styles.tabItemContainer}
       >
-        {/* Inactive Icon */}
-        <Animated.View
-          style={[styles.inactiveContainer, animatedInactiveStyle]}
-          pointerEvents="none"
-        >
-          {getIconElement(false, iconSize, inactiveIconColor)}
-        </Animated.View>
+        {/* Icon container - fixed position, always centered */}
+        <View style={styles.iconContainer}>
+          {/* Inactive Icon */}
+          <Animated.View
+            style={[styles.inactiveContainer, animatedInactiveStyle]}
+            pointerEvents="none"
+          >
+            {getIconElement(false, iconSize, inactiveIconColor)}
+          </Animated.View>
 
-        {/* Active State */}
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.activeTabCircle, animatedCircleStyle]}
-        >
-          {getIconElement(true, 24, activeIconColor)}
-          {typeof label === "string" && label.length > 0 && (
+          {/* Active Icon - same position as inactive */}
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.activeIconContainer, animatedCircleStyle]}
+          >
+            {getIconElement(true, 24, activeIconColor)}
+          </Animated.View>
+        </View>
+
+        {/* Text label - absolute position below icon, doesn't affect icon position */}
+        {isFocused && typeof label === "string" && label.length > 0 && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.labelContainer, animatedCircleStyle]}
+          >
             <Text style={[styles.tabLabel, { color: activeIconColor }]}>
               {label}
             </Text>
-          )}
-        </Animated.View>
+          </Animated.View>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -693,26 +704,77 @@ export function GlassTabBar({
       right: GLASS_CONFIG.horizontalMargin,
       alignItems: "center" as const,
       justifyContent: "center" as const,
-      height: GLASS_CONFIG.tabBarHeight, // Strict height limit to prevent blur from extending
-      overflow: "hidden" as const, // Clip blur effect to container bounds
+      height: GLASS_CONFIG.tabBarHeight, // Fixed height to contain icon and text
     }),
     [bottomMargin]
   );
 
+  // Filter visible routes
+  const visibleRoutes = useMemo(() => {
+    return state.routes.filter((route) => {
+      const { options } = descriptors[route.key];
+      const hiddenRoutes = ['profile', 'radio', 'search'];
+      
+      if (hiddenRoutes.includes(route.name)) {
+        return false;
+      }
+      
+      if (options.href === null) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [state.routes, descriptors]);
+
+  const totalTabs = visibleRoutes.length;
+  const maxVisibleTabs = 5;
+  const needsScroll = totalTabs > maxVisibleTabs;
+  
+  // Calculate item width based on visible tabs (max 5)
+  const visibleTabsCount = needsScroll ? maxVisibleTabs : totalTabs;
+  const itemWidth = tabBarWidth / visibleTabsCount;
+
   const tabBarStyle = useMemo(
     () => ({
       flexDirection: "row" as const,
-      paddingVertical: 8,
+      paddingVertical: 6,
       paddingHorizontal: 6,
-      justifyContent: "space-around" as const,
+      justifyContent: needsScroll ? ("flex-start" as const) : ("space-around" as const),
       position: "relative" as const,
-      width: tabBarWidth,
+      width: tabBarWidth, // Always use fixed width - ScrollView handles scrolling internally
       height: GLASS_CONFIG.tabBarHeight,
-      overflow: "hidden" as const, // Clip bubble to tab bar bounds
+      overflow: "hidden" as const, // Clip content to bounds
       borderRadius: pillBorderRadius,
     }),
-    [tabBarWidth, pillBorderRadius]
+    [tabBarWidth, pillBorderRadius, needsScroll]
   );
+
+  // ScrollView ref for auto-scrolling to selected tab
+  const scrollViewRef = useRef<ScrollView>(null);
+  const tabItemRefs = useRef<Map<number, View>>(new Map());
+
+  // Auto-scroll to selected tab when it's outside visible area
+  useEffect(() => {
+    if (!needsScroll || !scrollViewRef.current) return;
+
+    const activeVisibleIndex = visibleRoutes.findIndex(
+      (route) => state.routes[state.index].key === route.key
+    );
+
+    if (activeVisibleIndex >= 0 && activeVisibleIndex < totalTabs) {
+      // Calculate scroll position to center the active tab
+      const scrollPosition = Math.max(
+        0,
+        activeVisibleIndex * itemWidth - (tabBarWidth - itemWidth) / 2
+      );
+
+      scrollViewRef.current.scrollTo({
+        x: scrollPosition,
+        animated: true,
+      });
+    }
+  }, [state.index, needsScroll, visibleRoutes, totalTabs, itemWidth, tabBarWidth]);
 
   return (
     <View style={containerStyle}>
@@ -764,7 +826,7 @@ export function GlassTabBar({
             top: 0,
             left: 0,
             right: 0,
-            height: GLASS_CONFIG.tabBarHeight, // Strict height limit
+            height: GLASS_CONFIG.tabBarHeight, // Full tab bar height for bubble
             overflow: "hidden", // Clip any overflow
             borderRadius: pillBorderRadius, // Match tab bar border radius
             zIndex: 1, // Below tab items (zIndex: 20+)
@@ -777,48 +839,84 @@ export function GlassTabBar({
           />
         </View>
 
-        {/* Tab items - Render LAST with high z-index (stays on top) */}
-        {state.routes
-          .filter((route) => {
-            const { options } = descriptors[route.key];
-            // List of routes that should be hidden from tab bar
-            const hiddenRoutes = ['profile', 'radio', 'search'];
-            
-            // Hide routes by name (most reliable way)
-            if (hiddenRoutes.includes(route.name)) {
-              return false;
-            }
-            
-            // Also hide routes with href: null (expo-router way)
-            if (options.href === null) {
-              return false;
-            }
-            
-            return true;
-          })
-          .map((route, visibleIndex) => {
-            const { options } = descriptors[route.key];
-            const originalIndex = state.routes.findIndex((r) => r.key === route.key);
-            const isFocused = state.index === originalIndex;
-            const onPress = () => handleTabPress(route, isFocused);
-            const onLongPress = () => {
-              navigation.emit({ type: "tabLongPress", target: route.key });
-            };
-            return (
-              <TabItem
-                key={route.key}
-                route={route}
-                options={options}
-                isFocused={isFocused}
-                onPress={onPress}
-                onLongPress={onLongPress}
-                colors={colors}
-                onLayout={handleActiveTabLayout}
-                tabBarRef={tabBarRef}
-                tabIndex={visibleIndex}
-              />
-            );
-          })}
+        {/* Tab items container - ScrollView if needs scroll, otherwise regular View */}
+        {needsScroll ? (
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              flexDirection: "row",
+              alignItems: "stretch", // Stretch to full height
+              width: itemWidth * totalTabs, // Total width of all items for scrolling
+            }}
+            style={{
+              flex: 1,
+              width: tabBarWidth, // Visible width (shows max 5 items)
+            }}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
+          >
+            {visibleRoutes.map((route, visibleIndex) => {
+              const { options } = descriptors[route.key];
+              const originalIndex = state.routes.findIndex((r) => r.key === route.key);
+              const isFocused = state.index === originalIndex;
+              const onPress = () => handleTabPress(route, isFocused);
+              const onLongPress = () => {
+                navigation.emit({ type: "tabLongPress", target: route.key });
+              };
+              return (
+                <View
+                  key={route.key}
+                  style={{ width: itemWidth, height: GLASS_CONFIG.tabBarHeight }}
+                  ref={(ref) => {
+                    if (ref) {
+                      tabItemRefs.current.set(visibleIndex, ref);
+                    }
+                  }}
+                >
+                  <TabItem
+                    route={route}
+                    options={options}
+                    isFocused={isFocused}
+                    onPress={onPress}
+                    onLongPress={onLongPress}
+                    colors={colors}
+                    onLayout={handleActiveTabLayout}
+                    tabBarRef={tabBarRef}
+                    tabIndex={visibleIndex}
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <View style={{ flexDirection: "row", flex: 1 }}>
+            {visibleRoutes.map((route, visibleIndex) => {
+              const { options } = descriptors[route.key];
+              const originalIndex = state.routes.findIndex((r) => r.key === route.key);
+              const isFocused = state.index === originalIndex;
+              const onPress = () => handleTabPress(route, isFocused);
+              const onLongPress = () => {
+                navigation.emit({ type: "tabLongPress", target: route.key });
+              };
+              return (
+                <TabItem
+                  key={route.key}
+                  route={route}
+                  options={options}
+                  isFocused={isFocused}
+                  onPress={onPress}
+                  onLongPress={onLongPress}
+                  colors={colors}
+                  onLayout={handleActiveTabLayout}
+                  tabBarRef={tabBarRef}
+                  tabIndex={visibleIndex}
+                />
+              );
+            })}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -833,12 +931,22 @@ const styles = StyleSheet.create({
   tabItemContainer: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "center", // Center content vertically in available space
     position: "relative",
-    paddingVertical: 8,
-    minHeight: 48,
+    height: "100%", // Take full height of tab bar
     zIndex: 20, // High z-index - ensure container is above bubble
     elevation: 10, // Android elevation to ensure it's on top
+  },
+  iconContainer: {
+    position: "absolute",
+    top: 8, // Fixed position from top - icon stays here
+    left: 0,
+    right: 0,
+    height: 32, // Icon area height
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 21, // Above bubble
+    elevation: 11, // Android elevation
   },
   inactiveContainer: {
     position: "absolute",
@@ -846,26 +954,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
     height: "100%",
-    zIndex: 21, // Above bubble
-    elevation: 11, // Android elevation
+    zIndex: 22,
+    elevation: 12,
   },
-  activeTabCircle: {
+  activeIconContainer: {
     position: "absolute",
-    minWidth: 56,
-    minHeight: 48,
-    borderRadius: 24,
-    backgroundColor: "transparent", // Transparent to show liquid glass bubble
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    zIndex: 25, // Very high - ensure icon and text are clearly visible above bubble
+    width: "100%",
+    height: "100%",
+    borderRadius: 24,
+    backgroundColor: "transparent", // Transparent to show liquid glass bubble
+    zIndex: 25, // Very high - ensure icon is clearly visible above bubble
     elevation: 15, // Android elevation - ensure it's on top
+  },
+  labelContainer: {
+    position: "absolute",
+    top: 42, // Position below icon (8 top + 32 icon height + 2 gap)
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 16, // Fixed height for text
+    zIndex: 26, // Above icon
+    elevation: 16,
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: "600",
-    marginTop: 2,
     // Ensure text is clearly visible with subtle shadow
     textShadowColor: "rgba(255, 255, 255, 0.8)",
     textShadowOffset: { width: 0, height: 1 },

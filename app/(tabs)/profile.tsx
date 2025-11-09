@@ -6,10 +6,9 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useTheme } from 'heroui-native';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { Card } from 'heroui-native';
 import { FormInput } from '@/components/forms/FormInput';
 import { FormTextarea } from '@/components/forms/FormTextarea';
 import { FormButton } from '@/components/forms/FormButton';
@@ -38,11 +37,12 @@ interface UserProfile {
 }
 
 export default function ProfileScreen() {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const { user, setUser } = useAuthStore();
   const { loading: authLoading } = useAuth();
   const bottomPadding = useTabBarPadding();
   const { showToast } = useToast();
+  const isDark = theme === 'dark';
 
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -415,6 +415,53 @@ export default function ProfileScreen() {
   }
 
   const avatarColor = colors.accent;
+  const surfaceColor = colors.surface1 || (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)');
+  const dividerColor = colors.border || (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+
+  const renderSection = (title: string, children: React.ReactNode) => {
+    return (
+      <View style={styles.sectionContainer}>
+        <View style={[styles.section, { backgroundColor: surfaceColor }]}>
+          {title && (
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                {title}
+              </Text>
+            </View>
+          )}
+          <View style={styles.sectionContent}>
+            {children}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderInfoItem = (
+    label: string,
+    value: string | React.ReactNode,
+    showDivider: boolean = true
+  ) => {
+    return (
+      <>
+        <View style={styles.infoItemContainer}>
+          <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
+            {label}
+          </Text>
+          {typeof value === 'string' ? (
+            <Text style={[styles.infoValue, { color: colors.foreground }]}>
+              {value}
+            </Text>
+          ) : (
+            value
+          )}
+        </View>
+        {showDivider && (
+          <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        )}
+      </>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -425,8 +472,8 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
-        <Card className="mb-4 rounded-xl overflow-hidden">
-          <Card.Body style={{ padding: 20, alignItems: 'center' }}>
+        <View style={styles.profileHeaderContainer}>
+          <View style={[styles.profileHeader, { backgroundColor: surfaceColor }]}>
             {/* Avatar */}
             <View
               style={[
@@ -452,14 +499,16 @@ export default function ProfileScreen() {
 
             {/* Display Name (editable when editing) */}
             {isEditing ? (
-              <FormInput
-                label="Display Name"
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholder="Enter your name"
-                style={{ width: '100%', marginBottom: 8 }}
-                maxLength={50}
-              />
+              <View style={styles.editNameContainer}>
+                <FormInput
+                  label="Display Name"
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                  placeholder="Enter your name"
+                  style={{ width: '100%' }}
+                  maxLength={50}
+                />
+              </View>
             ) : (
               <Text
                 style={[styles.displayName, { color: colors.foreground }]}
@@ -484,126 +533,114 @@ export default function ProfileScreen() {
                 onPress={handleEdit}
                 variant="outline"
                 size="small"
-                style={{ marginTop: 16, minWidth: 120 }}
+                style={{ marginTop: 20, minWidth: 120 }}
               />
             )}
-          </Card.Body>
-        </Card>
+          </View>
+        </View>
 
         {/* Profile Information */}
-        <Card className="mb-4 rounded-xl overflow-hidden">
-          <Card.Body style={{ padding: 16, gap: 16 }}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-              Profile Information
-            </Text>
-
+        {renderSection('Profile Information', (
+          <>
             {/* Bio */}
             {isEditing ? (
-              <FormTextarea
-                label="Bio"
-                value={bio}
-                onChangeText={setBio}
-                placeholder="Tell us about yourself"
-                minRows={3}
-                maxRows={6}
-                maxLength={200}
-                showCharacterCount
-              />
-            ) : (
-              <View>
-                <Text style={[styles.label, { color: colors.foreground }]}>Bio</Text>
-                <Text
-                  style={[
-                    styles.bioText,
-                    { color: bio ? colors.foreground : colors.mutedForeground },
-                  ]}
-                >
-                  {bio || 'No bio set'}
-                </Text>
+              <View style={styles.formFieldContainer}>
+                <FormTextarea
+                  label="Bio"
+                  value={bio}
+                  onChangeText={setBio}
+                  placeholder="Tell us about yourself"
+                  minRows={3}
+                  maxRows={6}
+                  maxLength={200}
+                  showCharacterCount
+                />
               </View>
+            ) : (
+              <>
+                {renderInfoItem(
+                  'Bio',
+                  bio || 'No bio set',
+                  true
+                )}
+              </>
             )}
 
             {/* Date of Birth */}
             {isEditing ? (
-              <FormDatePicker
-                label="Date of Birth"
-                value={dateOfBirth}
-                onChange={setDateOfBirth}
-                mode="date"
-                placeholder="Select your date of birth"
-                maximumDate={new Date()} // Cannot select future dates
-                helperText="Select your date of birth"
-              />
+              <View style={styles.formFieldContainer}>
+                <FormDatePicker
+                  label="Date of Birth"
+                  value={dateOfBirth}
+                  onChange={setDateOfBirth}
+                  mode="date"
+                  placeholder="Select your date of birth"
+                  maximumDate={new Date()} // Cannot select future dates
+                  helperText="Select your date of birth"
+                />
+              </View>
             ) : (
-              <View>
-                <Text style={[styles.label, { color: colors.foreground }]}>Date of Birth</Text>
-                <Text
-                  style={[
-                    styles.infoText,
-                    { color: dateOfBirth ? colors.foreground : colors.mutedForeground },
-                  ]}
-                >
-                  {dateOfBirth
+              <>
+                {renderInfoItem(
+                  'Date of Birth',
+                  dateOfBirth
                     ? dateOfBirth.toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                       })
-                    : 'Not set'}
-                </Text>
-              </View>
+                    : 'Not set',
+                  true
+                )}
+              </>
             )}
 
             {/* Gender */}
             {isEditing ? (
-              <FormSelect
-                label="Gender"
-                value={gender}
-                onChange={(value) => setGender(value as string)}
-                options={genderOptions}
-                placeholder="Select gender"
-                searchable={false}
-              />
-            ) : (
-              <View>
-                <Text style={[styles.label, { color: colors.foreground }]}>Gender</Text>
-                <Text
-                  style={[
-                    styles.infoText,
-                    { color: gender ? colors.foreground : colors.mutedForeground },
-                  ]}
-                >
-                  {gender
-                    ? genderOptions.find((opt) => opt.value === gender)?.label || gender
-                    : 'Not set'}
-                </Text>
+              <View style={styles.formFieldContainer}>
+                <FormSelect
+                  label="Gender"
+                  value={gender}
+                  onChange={(value) => setGender(value as string)}
+                  options={genderOptions}
+                  placeholder="Select gender"
+                  searchable={false}
+                />
               </View>
+            ) : (
+              <>
+                {renderInfoItem(
+                  'Gender',
+                  gender
+                    ? genderOptions.find((opt) => opt.value === gender)?.label || gender
+                    : 'Not set',
+                  true
+                )}
+              </>
             )}
 
             {/* Address */}
             {isEditing ? (
-              <FormTextarea
-                label="Address"
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter your address"
-                minRows={2}
-                maxRows={4}
-                maxLength={200}
-                showCharacterCount
-              />
-            ) : (
-              <View>
-                <Text style={[styles.label, { color: colors.foreground }]}>Address</Text>
-                <Text
-                  style={[
-                    styles.infoText,
-                    { color: address ? colors.foreground : colors.mutedForeground },
-                  ]}
-                >
-                  {address || 'Not set'}
-                </Text>
+              <View style={styles.formFieldContainer}>
+                <FormTextarea
+                  label="Address"
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Enter your address"
+                  minRows={2}
+                  maxRows={4}
+                  maxLength={200}
+                  showCharacterCount
+                />
               </View>
+            ) : (
+              <>
+                {renderInfoItem(
+                  'Address',
+                  address || 'Not set',
+                  false
+                )}
+              </>
             )}
 
             {/* Save/Cancel Buttons */}
@@ -626,31 +663,22 @@ export default function ProfileScreen() {
                 />
               </View>
             )}
-          </Card.Body>
-        </Card>
+          </>
+        ))}
 
         {/* Account Info */}
-        <Card className="mb-4 rounded-xl overflow-hidden">
-          <Card.Body style={{ padding: 16, gap: 16 }}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-              Account Information
-            </Text>
-
+        {renderSection('Account Information', (
+          <>
             {/* Member Since */}
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                Member Since
-              </Text>
-              <Text style={[styles.infoValue, { color: colors.foreground }]}>
-                {getMemberSince()}
-              </Text>
-            </View>
+            {renderInfoItem(
+              'Member Since',
+              getMemberSince(),
+              true
+            )}
 
             {/* Email Verification Status */}
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                Email Status
-              </Text>
+            {renderInfoItem(
+              'Email Status',
               <View style={styles.statusRow}>
                 <Text
                   style={[
@@ -665,14 +693,13 @@ export default function ProfileScreen() {
                 >
                   {isEmailVerified ? 'Verified' : 'Unverified'}
                 </Text>
-              </View>
-            </View>
+              </View>,
+              true
+            )}
 
             {/* Account Status */}
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                Account Status
-              </Text>
+            {renderInfoItem(
+              'Account Status',
               <View style={styles.statusRow}>
                 <Text
                   style={[
@@ -685,14 +712,15 @@ export default function ProfileScreen() {
                 >
                   Active
                 </Text>
-              </View>
-            </View>
-          </Card.Body>
-        </Card>
+              </View>,
+              false
+            )}
+          </>
+        ))}
 
         {/* Logout Section */}
-        <Card className="mb-4 rounded-xl overflow-hidden">
-          <Card.Body style={{ padding: 16 }}>
+        <View style={styles.logoutContainer}>
+          <View style={[styles.logoutSection, { backgroundColor: surfaceColor }]}>
             <FormButton
               title={isLoggingOut ? 'Logging out...' : 'Logout'}
               onPress={handleLogout}
@@ -701,18 +729,18 @@ export default function ProfileScreen() {
               disabled={isLoggingOut || isSaving}
               loading={isLoggingOut}
             />
-          </Card.Body>
-        </Card>
+          </View>
+        </View>
 
         {/* Firestore Error Warning (if applicable) */}
         {profileError && profileError.message.includes('Database is not available') && (
-          <Card className="mb-4 rounded-xl overflow-hidden" style={{ borderColor: colors.warning, borderWidth: 1 }}>
-            <Card.Body style={{ padding: 16 }}>
+          <View style={styles.warningContainer}>
+            <View style={[styles.warningSection, { backgroundColor: surfaceColor }]}>
               <Text style={[styles.warningText, { color: colors.warning }]}>
                 Note: Database is not available. Profile data will be saved locally only.
               </Text>
-            </Card.Body>
-          </Card>
+            </View>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -727,13 +755,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
+  },
+  profileHeaderContainer: {
+    marginBottom: 24,
+  },
+  profileHeader: {
+    borderRadius: 14,
+    padding: 24,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   avatar: {
     alignItems: 'center',
@@ -744,62 +792,94 @@ const styles = StyleSheet.create({
   },
   displayName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '600',
     marginBottom: 4,
     textAlign: 'center',
   },
   email: {
     fontSize: 14,
     textAlign: 'center',
+    marginTop: 4,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
+  editNameContainer: {
+    width: '100%',
     marginBottom: 8,
   },
-  bioText: {
-    fontSize: 14,
-    lineHeight: 20,
-    minHeight: 40,
+  sectionContainer: {
+    marginBottom: 24,
   },
-  infoText: {
-    fontSize: 14,
-    lineHeight: 20,
-    minHeight: 20,
+  section: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  buttonRow: {
-    flexDirection: 'row',
-    marginTop: 8,
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  infoRow: {
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    opacity: 0.6,
+  },
+  sectionContent: {
+    paddingVertical: 4,
+  },
+  formFieldContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  infoItemContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 44,
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '400',
     flex: 1,
   },
   infoValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
+    fontSize: 16,
+    fontWeight: '400',
     textAlign: 'right',
+    marginLeft: 12,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 16,
+    marginRight: 16,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   statusRow: {
-    flex: 1,
     alignItems: 'flex-end',
+    marginLeft: 12,
   },
   statusBadge: {
     fontSize: 12,
     fontWeight: '600',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     overflow: 'hidden',
@@ -807,6 +887,44 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  logoutContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  logoutSection: {
+    borderRadius: 14,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  warningContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  warningSection: {
+    borderRadius: 14,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   warningText: {
     fontSize: 14,

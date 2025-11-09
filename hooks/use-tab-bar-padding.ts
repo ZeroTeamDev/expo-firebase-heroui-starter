@@ -11,7 +11,7 @@ import { useMemo } from "react";
 
 // Tab bar configuration - should match GlassTabBar.tsx
 const TAB_BAR_CONFIG = {
-  tabBarHeight: 10, // Height of the tab bar
+  tabBarHeight: 72, // Height of the tab bar (increased to accommodate text below icon)
   bottomMargin: -10, // Negative margin means tab bar is positioned above bottom
   extraSpacing: 20, // Extra spacing between content and tab bar
 } as const;
@@ -38,18 +38,18 @@ export function useTabBarPadding(): number {
   const padding = useMemo(() => {
     // Calculate bottom padding for content to avoid tab bar overlap
     // Tab bar configuration:
-    // - Height: 64px
+    // - Height: 72px (increased to accommodate text below icon)
     // - Bottom margin: -10px (positioned above safe area bottom)
     // - Extra spacing: 20px (visual breathing room)
     //
     // Total padding needed:
-    // - Tab bar height: 64px
+    // - Tab bar height: 72px
     // - Space from tab bar to safe area bottom: 10px (absolute value of bottomMargin)
     // - Safe area bottom inset: dynamic based on device
     // - Extra spacing: 20px
 
     const totalPadding =
-      TAB_BAR_CONFIG.tabBarHeight + // Tab bar itself (64px)
+      TAB_BAR_CONFIG.tabBarHeight + // Tab bar itself (72px)
       Math.max(0, -TAB_BAR_CONFIG.bottomMargin) + // Space if tab bar is above bottom (10px)
       TAB_BAR_CONFIG.extraSpacing + // Extra spacing (20px)
       insets.bottom; // Safe area bottom (varies by device)

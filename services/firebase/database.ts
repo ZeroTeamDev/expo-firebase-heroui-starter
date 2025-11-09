@@ -224,7 +224,10 @@ export async function readCollection<T = DocumentData>(
     }
     const operation = async () => {
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => doc.data() as T);
+      return querySnapshot.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      } as T & { id: string }));
     };
 
     return await retryOperation(operation, options?.retryCount, options?.retryDelay);
@@ -448,7 +451,10 @@ export function subscribeToCollection<T = DocumentData>(
     return onSnapshot(
       q,
       (querySnapshot) => {
-        const data = querySnapshot.docs.map((doc) => doc.data() as T);
+        const data = querySnapshot.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        } as T & { id: string }));
         callback(data);
       },
       (error) => {
