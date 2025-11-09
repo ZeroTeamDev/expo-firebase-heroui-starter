@@ -82,6 +82,53 @@ export function useFiles(filters?: QueryFilters) {
 }
 
 /**
+ * Get all files (admin mode - no permission filtering)
+ */
+export function useAllFiles(filters?: QueryFilters) {
+  const user = useAuthStore((state) => state.user);
+  const [files, setFiles] = useState<FileMetadata[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setFiles([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    // Admin mode: get all files without permission filtering
+    const unsubscribe = subscribeToCollection<FileMetadata>(
+      'files',
+      (fileList, err) => {
+        if (err) {
+          setError(err);
+          setLoading(false);
+          return;
+        }
+
+        // Ensure all files have IDs
+        const filesWithIds = fileList.map((file) => ({
+          ...file,
+          id: (file as any).id || '',
+        }));
+
+        setFiles(filesWithIds);
+        setLoading(false);
+      },
+      filters
+    );
+
+    return () => unsubscribe();
+  }, [user?.uid, JSON.stringify(filters)]);
+
+  return { files, loading, error };
+}
+
+/**
  * Get single file
  */
 export function useFile(fileId: string | null) {
@@ -223,7 +270,7 @@ export function useFileAccess(fileId: string | null) {
 }
 
 /**
- * Get user's files
+ * Get user's files with real-time updates
  */
 export function useUserFiles(userId?: string) {
   const currentUser = useAuthStore((state) => state.user);
@@ -242,22 +289,41 @@ export function useUserFiles(userId?: string) {
     setLoading(true);
     setError(null);
 
-    getUserFiles(targetUserId)
-      .then((fileList) => {
-        setFiles(fileList);
+    // Use real-time subscription instead of one-time fetch
+    const unsubscribe = subscribeToCollection<FileMetadata>(
+      'files',
+      (fileList, err) => {
+        if (err) {
+          setError(err);
+          setLoading(false);
+          return;
+        }
+
+        // Filter files by ownerId
+        const userFiles = fileList.filter((file) => file.ownerId === targetUserId);
+        
+        // Ensure all files have IDs
+        const filesWithIds = userFiles.map((file) => ({
+          ...file,
+          id: (file as any).id || '',
+        }));
+
+        setFiles(filesWithIds);
         setLoading(false);
-      })
-      .catch((err) => {
-        setError(err);
-        setLoading(false);
-      });
+      },
+      {
+        where: [['ownerId', '==', targetUserId]],
+      }
+    );
+
+    return () => unsubscribe();
   }, [targetUserId]);
 
   return { files, loading, error };
 }
 
 /**
- * Get group files
+ * Get group files with real-time updates
  */
 export function useGroupFiles(groupId: string | null) {
   const [files, setFiles] = useState<FileMetadata[]>([]);
@@ -274,22 +340,41 @@ export function useGroupFiles(groupId: string | null) {
     setLoading(true);
     setError(null);
 
-    getGroupFiles(groupId)
-      .then((fileList) => {
-        setFiles(fileList);
+    // Use real-time subscription instead of one-time fetch
+    const unsubscribe = subscribeToCollection<FileMetadata>(
+      'files',
+      (fileList, err) => {
+        if (err) {
+          setError(err);
+          setLoading(false);
+          return;
+        }
+
+        // Filter files by groupId
+        const groupFiles = fileList.filter((file) => file.groupId === groupId);
+        
+        // Ensure all files have IDs
+        const filesWithIds = groupFiles.map((file) => ({
+          ...file,
+          id: (file as any).id || '',
+        }));
+
+        setFiles(filesWithIds);
         setLoading(false);
-      })
-      .catch((err) => {
-        setError(err);
-        setLoading(false);
-      });
+      },
+      {
+        where: [['groupId', '==', groupId]],
+      }
+    );
+
+    return () => unsubscribe();
   }, [groupId]);
 
   return { files, loading, error };
 }
 
 /**
- * Get app-wide files
+ * Get app-wide files with real-time updates
  */
 export function useAppFiles() {
   const [files, setFiles] = useState<FileMetadata[]>([]);
@@ -300,15 +385,34 @@ export function useAppFiles() {
     setLoading(true);
     setError(null);
 
-    getAppFiles()
-      .then((fileList) => {
-        setFiles(fileList);
+    // Use real-time subscription instead of one-time fetch
+    const unsubscribe = subscribeToCollection<FileMetadata>(
+      'files',
+      (fileList, err) => {
+        if (err) {
+          setError(err);
+          setLoading(false);
+          return;
+        }
+
+        // Filter files by type === 'app'
+        const appFiles = fileList.filter((file) => file.type === 'app');
+        
+        // Ensure all files have IDs
+        const filesWithIds = appFiles.map((file) => ({
+          ...file,
+          id: (file as any).id || '',
+        }));
+
+        setFiles(filesWithIds);
         setLoading(false);
-      })
-      .catch((err) => {
-        setError(err);
-        setLoading(false);
-      });
+      },
+      {
+        where: [['type', '==', 'app']],
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   return { files, loading, error };

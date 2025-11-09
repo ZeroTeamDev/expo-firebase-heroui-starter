@@ -70,6 +70,7 @@ export default function AdminGroupManagementScreen() {
         name: data.name,
         description: data.description,
         ownerId: user.uid,
+        permissions: data.permissions,
       });
       setShowCreateModal(false);
       showToast({
@@ -93,6 +94,7 @@ export default function AdminGroupManagementScreen() {
       await updateGroup(selectedGroup.id, {
         name: data.name,
         description: data.description,
+        permissions: data.permissions,
       });
       setShowEditModal(false);
       setSelectedGroup(null);
@@ -238,18 +240,24 @@ export default function AdminGroupManagementScreen() {
           }
         />
 
+        {/* Add Group Button */}
+        <View style={styles.actionContainer}>
+          <TouchableOpacity
+            onPress={() => setShowCreateModal(true)}
+            style={[styles.addButton, { backgroundColor: colors.accent }]}
+            activeOpacity={0.8}
+          >
+            <IconSymbol name="plus.circle.fill" size={20} color="#ffffff" />
+            <Text style={styles.addButtonText}>Add Group</Text>
+          </TouchableOpacity>
+        </View>
+
         {groups.length === 0 ? (
           <View style={styles.empty}>
             <IconSymbol name="person.3.fill" size={48} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No groups found
+              No groups found. Create your first group to get started.
             </Text>
-            <Button
-              onPress={() => setShowCreateModal(true)}
-              style={styles.createFirstButton}
-            >
-              Create First Group
-            </Button>
           </View>
         ) : (
           <FlatList
@@ -384,6 +392,33 @@ export default function AdminGroupManagementScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  actionContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   list: {
     padding: 16,

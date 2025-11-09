@@ -18,6 +18,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'heroui-native';
 
 const MAX_TOASTS = 4;
@@ -134,13 +135,17 @@ interface ToastViewportProps {
 
 function ToastViewport({ toasts, placement, offset, onDismiss }: ToastViewportProps) {
   const stack = placement === 'bottom' ? toasts : [...toasts].reverse();
+  const { top, bottom, left, right } = useSafeAreaInsets();
 
   return (
     <View
       pointerEvents="box-none"
       style={[
         styles.viewport,
-        placement === 'top' ? { top: offset } : { bottom: offset },
+        placement === 'top' 
+          ? { top: offset + top } 
+          : { bottom: offset + bottom },
+        { paddingLeft: Math.max(left, 16), paddingRight: Math.max(right, 16) },
       ]}
     >
       <View style={[styles.toastStack, placement === 'bottom' ? { flexDirection: 'column-reverse' } : null]}>
@@ -299,12 +304,12 @@ function getVariantPalette(variant: ToastVariant, colors: ThemeColors, isDark: b
       icon: <Text style={{ color: colors.accent ?? '#4f46e5', fontSize: iconSize }}>✶</Text>,
     },
     success: {
-      background: isDark ? 'rgba(22,163,74,0.2)' : 'rgba(34,197,94,0.12)',
-      border: isDark ? 'rgba(34,197,94,0.4)' : 'rgba(34,197,94,0.3)',
+      background: isDark ? 'rgba(22,163,74,0.95)' : 'rgba(255,255,255,0.98)', // Solid background to prevent overlay
+      border: isDark ? 'rgba(34,197,94,0.6)' : 'rgba(34,197,94,0.4)',
       foreground: '#16a34a',
       onForeground: '#f8fafc',
-      description: isDark ? '#dcfce7' : '#14532d',
-      iconBackground: isDark ? 'rgba(34,197,94,0.28)' : 'rgba(34,197,94,0.16)',
+      description: isDark ? '#dcfce7' : '#166534', // Darker green for better contrast
+      iconBackground: isDark ? 'rgba(34,197,94,0.4)' : 'rgba(34,197,94,0.2)',
       icon: <Text style={{ color: '#16a34a', fontSize: iconSize }}>✔︎</Text>,
     },
     warning: {
@@ -346,11 +351,11 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     pointerEvents: 'box-none',
+    zIndex: 9999, // Ensure toast appears above all other content
   },
   toastStack: {
     width: '100%',
     maxWidth: 420,
-    paddingHorizontal: 16,
     gap: 12,
     pointerEvents: 'box-none',
   },
@@ -364,10 +369,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOpacity: 0.3, // Increased shadow for better visibility
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12, // Increased elevation for Android
+    // Ensure toast has solid background and doesn't overlay content
+    overflow: 'hidden',
   },
   toastContent: {
     flex: 1,

@@ -111,7 +111,7 @@ export function useCanManageUsers(): {
 /**
  * Check if current user can upload file
  */
-export function useCanUploadFile(fileSize: number): {
+export function useCanUploadFile(fileSize: number, groupId?: string | null): {
   allowed: boolean;
   reason?: string;
   loading: boolean;
@@ -130,7 +130,7 @@ export function useCanUploadFile(fileSize: number): {
       return;
     }
 
-    canUploadFile(user.uid, fileSize)
+    canUploadFile(user.uid, fileSize, groupId)
       .then((res) => {
         setResult(res);
         setLoading(false);
@@ -139,7 +139,7 @@ export function useCanUploadFile(fileSize: number): {
         setResult({ allowed: false, reason: 'Failed to check upload permission' });
         setLoading(false);
       });
-  }, [user?.uid, fileSize]);
+  }, [user?.uid, fileSize, groupId]);
 
   return { ...result, loading };
 }

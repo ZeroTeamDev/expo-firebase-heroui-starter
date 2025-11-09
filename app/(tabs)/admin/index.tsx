@@ -49,6 +49,13 @@ export default function AdminPanelScreen() {
       icon: 'person.3.fill',
       route: '/(tabs)/admin/groups',
     },
+    {
+      id: 'storage-test',
+      title: 'Storage Test',
+      description: 'Test Firebase Storage configuration',
+      icon: 'externaldrive.fill',
+      route: '/(tabs)/admin/storage-test',
+    },
   ];
 
   const renderSectionCard = (section: typeof adminSections[0]) => {

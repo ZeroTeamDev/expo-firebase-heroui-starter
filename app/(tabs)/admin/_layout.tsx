@@ -13,6 +13,7 @@ export default function AdminLayout() {
       <Stack.Screen name="users" />
       <Stack.Screen name="files" />
       <Stack.Screen name="groups" />
+      <Stack.Screen name="storage-test" />
     </Stack>
   );
 }

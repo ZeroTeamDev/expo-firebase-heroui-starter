@@ -6,11 +6,11 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from 'heroui-native';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
-import { FileUpload, FileList } from '@/components/files';
+import { FileUpload, FileList, FilePreviewModal } from '@/components/files';
 import { useFileManagementEnabled } from '@/hooks/use-config';
 import { useDeleteFile } from '@/hooks/use-files';
 import { useToast } from '@/components/feedback/Toast';
@@ -24,31 +24,46 @@ export default function LibraryScreen() {
   const { deleteFile, deleting } = useDeleteFile();
   const { showToast } = useToast();
   const [fileType, setFileType] = useState<'personal' | 'app' | 'group' | 'all'>('personal');
+  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
-  const handleFileDelete = async (fileId: string) => {
-    try {
-      await deleteFile(fileId);
-      showToast({
-        title: 'Success',
-        message: 'File deleted successfully',
-        variant: 'success',
-      });
-    } catch (error) {
-      showToast({
-        title: 'Error',
-        message: error instanceof Error ? error.message : 'Failed to delete file',
-        variant: 'error',
-      });
-    }
+  const handleFileDelete = (file: FileMetadata) => {
+    Alert.alert(
+      'Delete File',
+      `Are you sure you want to delete "${file.name}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteFile(file.id);
+              showToast({
+                title: 'Success',
+                message: 'File deleted successfully',
+                variant: 'success',
+              });
+            } catch (error) {
+              showToast({
+                title: 'Error',
+                message: error instanceof Error ? error.message : 'Failed to delete file',
+                variant: 'error',
+              });
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleFilePress = (file: FileMetadata) => {
-    // TODO: Implement file preview/open
-    showToast({
-      title: 'File',
-      message: `Opening ${file.name}`,
-      variant: 'info',
-    });
+    setPreviewFile(file);
+    setPreviewVisible(true);
   };
 
   const handleUploadComplete = (fileId: string, downloadURL: string) => {
@@ -168,6 +183,16 @@ export default function LibraryScreen() {
             />
           </View>
         </View>
+
+        {/* File Preview Modal */}
+        <FilePreviewModal
+          file={previewFile}
+          visible={previewVisible}
+          onClose={() => {
+            setPreviewVisible(false);
+            setPreviewFile(null);
+          }}
+        />
       </View>
     </FeatureGuard>
   );

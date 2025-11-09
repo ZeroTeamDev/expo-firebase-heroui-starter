@@ -5,12 +5,13 @@
  * Component for uploading files with progress and validation
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from 'heroui-native';
 import { useUploadFile } from '@/hooks/use-files';
 import { useFileUploadLimits, useFileManagementEnabled } from '@/hooks/use-config';
 import { useUserFileCount, useUserFileLimit } from '@/hooks/use-permissions';
+import { useGroupFileLimits } from '@/hooks/use-group-permissions';
 import { pickFiles } from '@/components/utils/file-picker';
 import { validateFileSize, validateFileType, formatFileSize } from '@/services/storage/storage.service';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -34,11 +35,24 @@ export function FileUpload({
 }: FileUploadProps) {
   const { colors, theme } = useTheme();
   const { upload, uploading, progress, error: uploadError } = useUploadFile();
-  const { maxFileSize, allowedFileTypes } = useFileUploadLimits();
+  const globalLimits = useFileUploadLimits();
+  const { maxFileSize: groupMaxFileSize, maxFileCount: groupMaxFileCount, loading: loadingGroupLimits } = useGroupFileLimits(
+    type === 'group' ? groupId : null
+  );
   const fileCount = useUserFileCount();
   const fileLimit = useUserFileLimit();
   const fileManagementEnabled = useFileManagementEnabled();
   const [error, setError] = useState<string | null>(null);
+
+  // Use group limits if uploading to group, otherwise use global limits
+  const maxFileSize = useMemo(() => {
+    if (type === 'group' && groupMaxFileSize !== null) {
+      return groupMaxFileSize;
+    }
+    return globalLimits.maxFileSize;
+  }, [type, groupMaxFileSize, globalLimits.maxFileSize]);
+
+  const allowedFileTypes = globalLimits.allowedFileTypes;
 
   const handleFilePick = useCallback(async () => {
     if (!fileManagementEnabled) {
@@ -163,9 +177,15 @@ export function FileUpload({
         <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
           Max file size: {formatFileSize(maxFileSize)}
         </Text>
-        <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-          Files: {fileCount}/{fileLimit}
-        </Text>
+        {type === 'group' && groupMaxFileCount !== null ? (
+          <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
+            Group files: {groupMaxFileCount} max
+          </Text>
+        ) : (
+          <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
+            Files: {fileCount}/{fileLimit}
+          </Text>
+        )}
       </View>
     </View>
   );

@@ -1,275 +1,525 @@
-import React, { useState, useEffect } from 'react';
-import {
-  X,
-  ChevronLeft,
-  Bug,
-  MessageSquare,
-  Lightbulb,
-  Send,
-  Repeat,
-  Activity,
-  Coins,
-  Image as ImageIcon,
-  MoreHorizontal,
-  Check
-} from 'lucide-react';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import { GoogleGenAI, Modality } from '@google/genai';
 
-// --- Mock Data & Constants ---
-const MAIN_MENU_ITEMS = [
-  {
-    id: 'bug',
-    icon: Bug,
-    title: 'Report Bug',
-    description: 'Let us know about a specific issue you\'re experiencing.',
-    targetStep: 'reportBug'
-  },
-  {
-    id: 'feedback',
-    icon: MessageSquare,
-    title: 'Share Feedback',
-    description: 'Let us know how to improve by providing some feedback.',
-    targetStep: 'chooseAreas'
-  },
-  {
-    id: 'other',
-    icon: Lightbulb,
-    title: 'Something Else',
-    description: 'Request features, leave a nice comment, or anything else.',
-    targetStep: null // Just a placeholder for demo
-  }
-];
+// --- DOM ELEMENT REFERENCES ---
+const fileInput = document.getElementById('file-input') as HTMLInputElement;
+const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
+const imagePreviewContainer = document.getElementById('image-preview-container') as HTMLDivElement;
+const uploadPlaceholder = document.getElementById('upload-placeholder') as HTMLParagraphElement;
+const roleSelector = document.querySelector('.role-selector') as HTMLDivElement;
+const sceneSelector = document.querySelector('.scene-selector') as HTMLDivElement;
+const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
+const loader = document.getElementById('loader') as HTMLDivElement;
+const resultCard = document.getElementById('result-card') as HTMLDivElement;
+const resultImage = document.getElementById('result-image') as HTMLImageElement;
+const outputPlaceholder = document.getElementById('output-placeholder') as HTMLParagraphElement;
+const errorMessage = document.getElementById('error-message') as HTMLParagraphElement;
+const downloadButton = document.getElementById('download-button') as HTMLButtonElement;
+const collectionGrid = document.getElementById('collection-grid') as HTMLDivElement;
+const collectionSection = document.getElementById('collection-section') as HTMLElement;
 
-const AREA_ITEMS = [
-  { id: 'send', icon: Send, label: 'Send' },
-  { id: 'swaps', icon: Repeat, label: 'Swaps' },
-  { id: 'activity', icon: Activity, label: 'Activity' },
-  { id: 'tokens', icon: Coins, label: 'Tokens' },
-  { id: 'collectibles', icon: ImageIcon, label: 'Collectibles' },
-  { id: 'other', icon: MoreHorizontal, label: 'Other' },
-];
 
-function App() {
-  const [isSheetOpen, setIsSheetOpen] = useState(true); // Start open for demo
-  const [currentStep, setCurrentStep] = useState('menu'); // 'menu', 'chooseAreas', 'reportBug'
-  const [selectedAreas, setSelectedAreas] = useState([]);
-  const [bugSubject, setBugSubject] = useState('');
+// --- APPLICATION STATE ---
+let selectedFile: { mimeType: string, data: string } | null = null;
+let selectedRole: string | null = null;
+let selectedScene: string | null = null;
+let isLoading = false;
+const COLLECTION_KEY = 'romanPortraitsCollection';
 
-  // Handle Opening/Closing
-  const openSheet = () => {
-    setCurrentStep('menu');
-    setIsSheetOpen(true);
-  };
-  const closeSheet = () => setIsSheetOpen(false);
+// --- GEMINI API SETUP ---
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  // Handle Navigation
-  const goToStep = (step) => setCurrentStep(step);
-  const goBack = () => setCurrentStep('menu');
+// --- EVENT LISTENERS ---
+fileInput.addEventListener('change', handleFileChange);
+roleSelector.addEventListener('click', handleRoleSelect);
+sceneSelector.addEventListener('click', handleSceneSelect);
+generateButton.addEventListener('click', handleGenerateClick);
+downloadButton.addEventListener('click', handleDownloadClick);
 
-  // Handle Area Selection Toggle
-  const toggleArea = (id) => {
-    setSelectedAreas(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
 
-  return (
-    <div className="relative min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 font-sans overflow-hidden flex justify-center items-center">
-      {/* --- Background Content (Mock App) --- */}
-      <div className="text-center text-white p-8 transition-all duration-500" style={{ filter: isSheetOpen ? 'blur(4px) brightness(0.8)' : 'none', transform: isSheetOpen ? 'scale(0.95)' : 'scale(1)' }}>
-        <div className="text-9xl font-bold opacity-20 mix-blend-overlay">404</div>
-        <h1 className="text-4xl font-bold mb-4 drop-shadow-lg">Google</h1>
-        <p className="text-xl opacity-90 drop-shadow-md">Page Not Found</p>
-        {!isSheetOpen && (
-          <button
-            onClick={openSheet}
-            className="mt-12 px-6 py-3 bg-white/20 backdrop-blur-xl border border-white/40 text-white rounded-full font-semibold shadow-lg hover:bg-white/30 transition-all"
-          >
-            Open Help
-          </button>
-        )}
-      </div>
+// --- FUNCTIONS ---
 
-      {/* --- Overlay (Dark background when sheet is open) --- */}
-      <div
-        className={`fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-500 z-40 ${isSheetOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        onClick={closeSheet}
-      />
+/**
+ * Handles the file input change event.
+ */
+async function handleFileChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+        selectedFile = null;
+        updateUI();
+        return;
+    }
 
-      {/* --- Bottom Sheet Container with Liquid Glass Effect --- */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-50 rounded-t-[40px] transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isSheetOpen ? 'translate-y-0' : 'translate-y-[110%]'}`}
-        style={{ 
-          maxHeight: '90vh',
-          // Liquid Glass Style
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1))',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.5)',
-          borderLeft: '1px solid rgba(255, 255, 255, 0.5)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 4px 6px rgba(255,255,255,0.2)',
-        }}
-      >
-        {/* Handle bar for visual affordance */}
-        <div className="w-full flex justify-center pt-4 pb-2">
-           <div className="w-12 h-1.5 bg-white/50 rounded-full backdrop-blur-md shadow-sm"></div>
-        </div>
-
-        {/* Content Area with overflow for scrolling if needed */}
-        <div className="p-6 pt-2 overflow-y-auto max-h-[85vh]">
-
-          {/* --- STEP 1: MAIN MENU --- */}
-          {currentStep === 'menu' && (
-            <div className="animate-fadeIn">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 drop-shadow-sm mix-blend-hard-light">How can we help?</h2>
-                <button onClick={closeSheet} className="p-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
-                  <X size={20} className="text-gray-700" />
-                </button>
-              </div>
-
-              {/* Menu List */}
-              <div className="space-y-3">
-                {MAIN_MENU_ITEMS.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => item.targetStep && goToStep(item.targetStep)}
-                    className="flex items-start p-4 bg-white/20 backdrop-blur-lg border border-white/40 hover:bg-white/30 active:bg-white/40 rounded-3xl cursor-pointer transition-all group shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.1)]"
-                    style={{
-                         background: 'linear-gradient(145deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))',
-                    }}
-                  >
-                    <div className="bg-white/60 p-3 rounded-full shadow-sm mr-4 group-hover:shadow-md transition-shadow backdrop-blur-md">
-                      <item.icon size={24} className="text-gray-800" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900 mb-1 mix-blend-hard-light">{item.title}</h3>
-                      <p className="text-sm text-gray-700 leading-snug mix-blend-hard-light">{item.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* --- STEP 2A: CHOOSE AREAS --- */}
-          {currentStep === 'chooseAreas' && (
-            <div className="animate-fadeIn">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <button onClick={goBack} className="p-2 -ml-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
-                  <ChevronLeft size={24} className="text-gray-800" />
-                </button>
-                <h2 className="text-xl font-bold text-gray-800 drop-shadow-sm mix-blend-hard-light">Choose Areas</h2>
-                <button onClick={closeSheet} className="p-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
-                   <X size={20} className="text-gray-700" />
-                </button>
-              </div>
-
-              {/* Selection List */}
-              <div className="space-y-2 mb-8">
-                {AREA_ITEMS.map((item) => {
-                  const isSelected = selectedAreas.includes(item.id);
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => toggleArea(item.id)}
-                      className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all border ${isSelected ? 'bg-white/40 border-white/60 shadow-md' : 'bg-white/10 border-white/20 hover:bg-white/20'} backdrop-blur-md`}
-                    >
-                      <div className="flex items-center">
-                        <item.icon size={24} className={`mr-4 ${isSelected ? 'text-indigo-700 drop-shadow-sm' : 'text-gray-600'}`} />
-                        <span className={`text-lg font-medium ${isSelected ? 'text-gray-900' : 'text-gray-800'} mix-blend-hard-light`}>
-                          {item.label}
-                        </span>
-                      </div>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-500 scale-110 shadow-lg border-none' : 'border-2 border-white/50 bg-white/20'}`}>
-                        {isSelected && <Check size={16} className="text-white" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Footer Button */}
-              <button
-                disabled={selectedAreas.length === 0}
-                className={`w-full py-4 rounded-full font-bold text-lg transition-all duration-300 backdrop-blur-xl border border-white/40 shadow-lg ${
-                  selectedAreas.length > 0
-                    ? 'bg-indigo-600/80 text-white hover:scale-[1.02] active:scale-[0.98] hover:bg-indigo-700/90'
-                    : 'bg-white/20 text-gray-500/70 cursor-not-allowed'
-                }`}
-              >
-                Continue
-              </button>
-            </div>
-          )}
-
-          {/* --- STEP 2B: REPORT BUG --- */}
-          {currentStep === 'reportBug' && (
-            <div className="animate-fadeIn">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <button onClick={goBack} className="p-2 -ml-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
-                  <ChevronLeft size={24} className="text-gray-800" />
-                </button>
-                <h2 className="text-xl font-bold text-gray-800 drop-shadow-sm mix-blend-hard-light">Report a Bug</h2>
-                <button onClick={closeSheet} className="p-2 bg-white/30 backdrop-blur-lg border border-white/40 rounded-full hover:bg-white/50 transition-all shadow-sm">
-                   <X size={20} className="text-gray-700" />
-                </button>
-              </div>
-
-              {/* Form */}
-              <div className="space-y-4 mb-8">
-                <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-1 ml-1 drop-shadow-sm mix-blend-hard-light">Subject</label>
-                    <input
-                      type="text"
-                      placeholder="Brief summary of the issue"
-                      value={bugSubject}
-                      onChange={(e) => setBugSubject(e.target.value)}
-                      className="w-full p-4 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-600 text-gray-900 shadow-inner"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-1 ml-1 drop-shadow-sm mix-blend-hard-light">Description</label>
-                    <textarea
-                      rows={4}
-                      placeholder="Describe the issue in more detail, including steps to reproduce"
-                      className="w-full p-4 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 focus:ring-2 focus:ring-indigo-500/50 outline-none resize-none transition-all placeholder-gray-600 text-gray-900 shadow-inner"
-                    ></textarea>
-                </div>
-              </div>
-
-              {/* Footer Button */}
-              <button
-                disabled={bugSubject.length === 0}
-                 className={`w-full py-4 rounded-full font-bold text-lg transition-all duration-300 backdrop-blur-xl border border-white/40 shadow-lg ${
-                  bugSubject.length > 0
-                    ? 'bg-indigo-600/80 text-white hover:scale-[1.02] active:scale-[0.98] hover:bg-indigo-700/90'
-                    : 'bg-white/20 text-gray-500/70 cursor-not-allowed'
-                }`}
-              >
-                Continue
-              </button>
-            </div>
-          )}
-
-        </div>
-      </div>
-      
-      {/* Simple keyframe animation for fade-in effect when switching steps */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out forwards;
-        }
-      `}</style>
-    </div>
-  );
+    try {
+        const base64Data = await fileToBase64(file);
+        selectedFile = {
+            mimeType: file.type,
+            data: base64Data,
+        };
+        imagePreview.src = `data:${file.type};base64,${base64Data}`;
+        uploadPlaceholder.style.display = 'none';
+        imagePreview.style.display = 'block';
+    } catch (error) {
+        console.error('Error converting file to base64:', error);
+        selectedFile = null;
+        displayError('Không thể tải ảnh. Vui lòng thử một tệp khác.');
+    }
+    updateUI();
 }
 
-export default App;
+/**
+ * Handles role selection via event delegation.
+ */
+function handleRoleSelect(event: Event) {
+    const target = event.target as HTMLButtonElement;
+    if (!target.classList.contains('role-button')) return;
+
+    // Deselect other buttons
+    document.querySelectorAll('.role-button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
+
+    // Select the clicked button
+    target.classList.add('active');
+    target.setAttribute('aria-pressed', 'true');
+    selectedRole = target.dataset.role || null;
+    updateUI();
+}
+
+/**
+ * Handles scene selection via event delegation.
+ */
+function handleSceneSelect(event: Event) {
+    const target = event.target as HTMLButtonElement;
+    if (!target.classList.contains('scene-button')) return;
+
+    // Deselect other buttons
+    document.querySelectorAll('.scene-button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
+
+    // Select the clicked button
+    target.classList.add('active');
+    target.setAttribute('aria-pressed', 'true');
+    selectedScene = target.dataset.scene || null;
+    updateUI();
+}
+
+/**
+ * The core function to generate the image.
+ */
+async function handleGenerateClick() {
+    if (!selectedFile || !selectedRole || !selectedScene || isLoading) return;
+
+    setLoading(true);
+    clearOutput();
+
+    const prompt = buildPrompt(selectedRole, selectedScene);
+    const imagePart = {
+        inlineData: {
+            data: selectedFile.data,
+            mimeType: selectedFile.mimeType,
+        },
+    };
+    const textPart = { text: prompt };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [imagePart, textPart] },
+            config: {
+                responseModalities: [Modality.IMAGE],
+            },
+        });
+
+        const imagePartResponse = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+
+        if (imagePartResponse?.inlineData) {
+            const base64Image = imagePartResponse.inlineData.data;
+            const mimeType = imagePartResponse.inlineData.mimeType || 'image/jpeg';
+            resultImage.src = `data:${mimeType};base64,${base64Image}`;
+            resultCard.style.display = 'block';
+            downloadButton.style.display = 'block'; // Show download button
+            
+            // Asynchronously save the result without blocking the UI
+            saveResultToCollection();
+        } else {
+            throw new Error('Không có ảnh nào được tạo. Mô hình có thể đã không hiểu yêu cầu.');
+        }
+    } catch (error) {
+        console.error('Gemini API Error:', error);
+        displayError('Không thể tạo chân dung. Điềm báo hôm nay không tốt. Vui lòng thử lại.');
+    } finally {
+        setLoading(false);
+    }
+}
+
+
+/**
+ * Creates a canvas with the full result card and returns it as a Blob.
+ * @returns A promise that resolves with the Blob or null on error.
+ */
+async function generateCardBlob(): Promise<Blob | null> {
+    if (!resultImage.src || !resultCard) return null;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error("Could not get canvas context.");
+        return null;
+    }
+
+    const cardWidth = 500; // Use a fixed size for consistency
+    const cardHeight = 500;
+    
+    canvas.width = cardWidth;
+    canvas.height = cardHeight;
+
+    // 1. Draw background gradient
+    const gradient = ctx.createLinearGradient(0, 0, cardWidth, cardHeight);
+    gradient.addColorStop(0, '#333');
+    gradient.addColorStop(1, '#1e1e1e');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, cardWidth, cardHeight);
+    
+    // 2. Draw the generated image
+    const padding = 20;
+    const containerX = padding;
+    const containerY = padding;
+    const containerWidth = cardWidth - padding * 2;
+    const containerHeight = cardHeight - padding * 2;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    
+    try {
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = resultImage.src;
+        });
+        
+        const imgWidth = img.naturalWidth;
+        const imgHeight = img.naturalHeight;
+        const imgRatio = imgWidth / imgHeight;
+        const containerRatio = containerWidth / containerHeight;
+
+        let sx = 0, sy = 0, sw = imgWidth, sh = imgHeight;
+
+        if (imgRatio > containerRatio) {
+            sw = imgHeight * containerRatio;
+            sx = (imgWidth - sw) / 2;
+        } else {
+            sh = imgWidth / containerRatio;
+            sy = (imgHeight - sh) / 2;
+        }
+        
+        ctx.drawImage(img, sx, sy, sw, sh, containerX, containerY, containerWidth, containerHeight);
+
+    } catch (error) {
+        console.error("Error loading image onto canvas:", error);
+        displayError("Lỗi khi xử lý ảnh để tải xuống.");
+        return null;
+    }
+    
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(containerX, containerY, containerWidth, containerHeight);
+
+    // 3. Draw decorative corners
+    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 3;
+    const cornerSize = 25;
+    const cornerOffset = 8;
+
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(cornerOffset, cornerOffset + cornerSize);
+    ctx.lineTo(cornerOffset, cornerOffset);
+    ctx.lineTo(cornerOffset + cornerSize, cornerOffset);
+    ctx.stroke();
+
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(cardWidth - cornerOffset - cornerSize, cornerOffset);
+    ctx.lineTo(cardWidth - cornerOffset, cornerOffset);
+    ctx.lineTo(cardWidth - cornerOffset, cornerOffset + cornerSize);
+    ctx.stroke();
+
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(cornerOffset, cardHeight - cornerOffset - cornerSize);
+    ctx.lineTo(cornerOffset, cardHeight - cornerOffset);
+    ctx.lineTo(cornerOffset + cornerSize, cardHeight - cornerOffset);
+    ctx.stroke();
+
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(cardWidth - cornerOffset - cornerSize, cardHeight - cornerOffset);
+    ctx.lineTo(cardWidth - cornerOffset, cardHeight - cornerOffset);
+    ctx.lineTo(cardWidth - cornerOffset, cardHeight - cornerOffset - cornerSize);
+    ctx.stroke();
+
+    return new Promise(resolve => {
+        canvas.toBlob(blob => resolve(blob), 'image/png');
+    });
+}
+
+
+/**
+ * Handles the download button click.
+ */
+async function handleDownloadClick() {
+    const blob = await generateCardBlob();
+    if (!blob) {
+        displayError("Không thể tạo ảnh để tải xuống. Trình duyệt không hỗ trợ.");
+        return;
+    }
+    
+    const slugify = (text: string): string => {
+        return text
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d")
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+    };
+
+    const activeRoleButton = document.querySelector('.role-button.active') as HTMLButtonElement;
+    const activeSceneButton = document.querySelector('.scene-button.active') as HTMLButtonElement;
+
+    const roleText = activeRoleButton ? activeRoleButton.innerText : selectedRole;
+    const sceneText = activeSceneButton ? activeSceneButton.innerText : selectedScene;
+    
+    let filename = 'chan-dung-la-ma.png';
+    if(roleText && sceneText) {
+        filename = `${slugify(roleText)}-${slugify(sceneText)}.png`;
+    }
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
+
+/**
+ * Updates the UI state, enabling/disabling the generate button.
+ */
+function updateUI() {
+    generateButton.disabled = !selectedFile || !selectedRole || !selectedScene || isLoading;
+}
+
+
+/**
+ * Sets the loading state of the application.
+ * @param loading - True to show loader, false to hide.
+ */
+function setLoading(loading: boolean) {
+    isLoading = loading;
+    loader.style.display = loading ? 'flex' : 'none';
+    if(loading) {
+        outputPlaceholder.style.display = 'none';
+        resultCard.style.display = 'none';
+    }
+    updateUI();
+}
+
+/**
+ * Clears previous results and errors from the output panel.
+ */
+function clearOutput() {
+    resultImage.src = '';
+    resultCard.style.display = 'none';
+    downloadButton.style.display = 'none';
+    errorMessage.textContent = '';
+    errorMessage.style.display = 'none';
+    outputPlaceholder.style.display = 'block';
+}
+
+/**
+ * Displays an error message in the output panel.
+ * @param message - The error message to display.
+ */
+function displayError(message: string) {
+    clearOutput();
+    outputPlaceholder.style.display = 'none';
+    errorMessage.textContent = message;
+    errorMessage.style.display = 'block';
+}
+
+
+/**
+ * Converts an image file to a base64 encoded string.
+ * @param file - The file to convert.
+ * @returns A promise that resolves with the base64 string.
+ */
+function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]); // Get only the base64 part
+        };
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Builds the detailed prompt for the Gemini API.
+ * @param role - The selected Roman role.
+ * @param scene - The selected Roman scene.
+ * @returns The complete text prompt.
+ */
+function buildPrompt(role: string, scene: string): string {
+    const basePrompt = `Transform the person in this photo into the specified Roman character, integrating their face seamlessly. The final image must be a photorealistic portrait with the gritty, cinematic aesthetic of historical dramas from the early 2000s like 'Gladiator'. Key style elements: dramatic high-contrast lighting, deep shadows, a desaturated earthy color palette (ochres, browns, muted reds), and a subtle natural film grain. All materials must look realistic and weathered.`;
+
+    const roleDetails: { [key: string]: string } = {
+        Legionary: "Role: Roman Legionary. Equip them in battle-worn Lorica Segmentata armor and a Galea helmet, with a red wool tunic underneath. Their expression is disciplined and tough.",
+        Centurion: "Role: Roman Centurion. Equip them in ornate Lorica Squamata (scale mail) and a Galea helmet with a transverse crest. Adorn them with phalerae (medals) on a chest harness. Their expression shows command and authority.",
+        'Auxiliary Archer': "Role: Roman Auxiliary Archer. Equip them in light, flexible, weathered leather armor and a simple helmet. They have a composite bow and a quiver of arrows.",
+        Senator: "Role: Roman Senator. Dress them in a formal, high-quality wool toga with a broad purple stripe (latus clavus). Their expression is thoughtful, powerful, and aristocratic.",
+        Gladiator: "Role: Murmillo Gladiator. Equip them with asymmetrical armor: a large, ornate galea helmet that covers the face, a shield (scutum), armor on one arm (manica), and a greave on one leg (ocrea). Their torso is mostly exposed and athletic.",
+        Farmer: "Role: Roman Farmer. Dress them in a simple, practical, earth-stained tunic made of coarse wool. Their skin is weathered by the sun and their expression is one of quiet resilience and connection to the land.",
+        Merchant: "Role: Roman Merchant. Dress them in a fine but practical tunic and a traveling cloak. They might be holding a coin pouch or examining goods. Their expression is shrewd, worldly, and calculating.",
+        Blacksmith: "Role: Roman Blacksmith. Depict them with a muscular build, wearing a leather apron over a simple tunic. Their face and arms are smudged with soot. They should be holding a hammer or tongs. Their expression is focused and industrious.",
+        'Vestal Virgin': "Role: Vestal Virgin. Dress her in the traditional white robes of a Vestal (stola) and a head covering (infula). Her expression should be serene, pious, and dignified, reflecting her sacred duty.",
+        Physician: "Role: Roman Physician (Medicus). Dress them in a clean, respectable tunic. They might be holding medical instruments of the era, like bronze scalpels or forceps, or examining a medicinal herb. Their expression is intelligent, calm, and observant.",
+        Charioteer: "Role: Roman Charioteer. Equip them in a leather harness (fasciae) wrapped tightly around their torso for protection, and a simple helmet. Their expression is one of intense focus, adrenaline, and determination.",
+        'Praetorian Guard': "Role: Praetorian Guard. Equip them in highly ornate, polished Lorica Segmentata armor, a helmet with a prominent crest, and a purple cloak. They carry a decorated scutum (shield). Their expression is elite, intimidating, and unwavering.",
+        Emperor: "Role: Roman Emperor. Dress them in a regal purple toga (toga picta) embroidered with gold thread and a laurel wreath crown. Their expression is one of supreme authority, wisdom, and the weight of an empire.",
+    };
+    
+    const sceneDetails: { [key: string]: string } = {
+        Arena: "Scene: In the Arena. The background is the sand of a grand colosseum, filled with a roaring crowd under the harsh sun. Dust kicks up from the ground. The atmosphere is tense and brutal.",
+        Senate: "Scene: At the Senate. The background is the Curia Hostilia, a grand hall with marble columns, tiered seating, and opulent decorations. The lighting is dramatic, with shafts of light cutting through the shadows. The atmosphere is one of serious debate and political intrigue.",
+        Battlefield: "Scene: On the Battlefield. The background is a chaotic battle scene at the edge of a dark forest, possibly in Germania. Smoke, mud, and the clash of steel are evident. The lighting is grim and overcast. The atmosphere is one of violent conflict and survival.",
+        Banquet: "Scene: At a Banquet. The background is a lavish Roman villa during a feast. There are reclining couches (triclinia), tables laden with food and wine, and decorative frescoes on the walls. The lighting is warm and flickering from oil lamps. The atmosphere is decadent and social.",
+        Marketplace: "Scene: In the Marketplace. The background is a bustling street in the Roman Forum. Crowds of people, market stalls with goods, and grand temples are visible in the distance. The lighting is bright and lively. The atmosphere is energetic and full of daily life.",
+        RomanBaths: "Scene: At the Roman Baths (Thermae). The background features large, steamy pools, mosaic floors, and vaulted ceilings. Light streams in from high windows, illuminating the water vapor. The atmosphere is relaxed and communal.",
+        LibraryOfAlexandria: "Scene: In the Library of Alexandria. The background is filled with towering shelves of scrolls, marble statues of scholars, and people studying intently. The lighting is soft and scholarly, coming from oil lamps and high windows. The atmosphere is one of knowledge and quiet contemplation.",
+        TempleOfJupiter: "Scene: Before the Temple of Jupiter Optimus Maximus. The background is the massive, imposing facade of the temple on the Capitoline Hill, with grand columns and statues. Worshippers and priests are present. The lighting is epic and divine, as if blessed by the gods. The atmosphere is reverent and awe-inspiring.",
+        VillaCourtyard: "Scene: In a Villa Courtyard. The background is a serene, open-air peristyle garden with a central fountain, manicured hedges, frescoes, and mosaic walkways. The lighting is soft and natural daylight. The atmosphere is peaceful and luxurious.",
+        TuscanVineyard: "Scene: In a Tuscan Vineyard. The background shows rolling hills covered in neat rows of grapevines under the warm Italian sun. A rustic farmhouse is visible in the distance. The atmosphere is bucolic and fertile.",
+        Aqueduct: "Scene: On a grand Aqueduct. The background is a stunning view of the Roman countryside from atop a massive, multi-tiered aqueduct. The structure stretches into the distance. The lighting is bright and open. The atmosphere is one of engineering marvel and expansive views.",
+        AppianWay: "Scene: On the Appian Way. The background is the famous stone-paved road leading out of Rome, lined with ancient monuments and cypress trees. A few travelers and a cart might be seen. The lighting is late afternoon golden hour. The atmosphere is historic and journey-focused.",
+        CircusMaximus: "Scene: At the Circus Maximus. The scene is a thrilling chariot race. The background is the massive race track, packed with cheering crowds, with the spina (central barrier) decorated with obelisks. The atmosphere is high-energy, dangerous, and exhilarating.",
+        VulcansForge: "Scene: In Vulcan's Forge. The background is a dark, smoky blacksmith's workshop filled with tools, armor, and weapons. The primary light source is the glowing heat of the forge, casting dramatic shadows. The atmosphere is industrious and intensely hot.",
+        GovernorsPalace: "Scene: In a Governor's Palace in a province like Britannia or Judea. The background shows a blend of Roman architecture and local design elements. Guards are present. The lighting is formal and interior. The atmosphere is one of colonial power and administration.",
+        Catacombs: "Scene: In the Catacombs. The background consists of narrow, torch-lit tunnels carved from rock, lined with burial niches. The air is still and mysterious. The lighting is sparse and flickering. The atmosphere is somber, secretive, and slightly unnerving.",
+        PortOfOstia: "Scene: At the Port of Ostia. The background is a busy harbor with Roman warships (triremes) and merchant vessels, warehouses, and the lighthouse. Sailors and merchants are at work. The lighting is bright, coastal sun. The atmosphere is commercial and bustling with activity.",
+        Scriptorium: "Scene: In a Scriptorium. The background is a room dedicated to copying scrolls. Monks or scribes are bent over desks with ink and quills. The lighting is focused and quiet, perhaps from a single window. The atmosphere is scholarly and meticulous.",
+        HadriansWall: "Scene: On Hadrian's Wall. The background is the rugged, windswept landscape of northern Britannia, with the stone wall stretching across the hills. The weather is overcast and misty. The atmosphere is one of vigilance, isolation, and the edge of the empire.",
+        GladiatorSchool: "Scene: At a Gladiator School (Ludus). The background is a dusty training yard with wooden posts, practice weapons, and other gladiators training. The architecture is utilitarian and stark. The lighting is harsh midday sun. The atmosphere is disciplined, gritty, and competitive.",
+    };
+
+    return `${basePrompt}\n\n${roleDetails[role]}\n\n${sceneDetails[scene]}`;
+}
+
+
+// --- COLLECTION FUNCTIONS ---
+
+/**
+ * Converts a blob to a base64 data URL.
+ * @param blob The blob to convert.
+ * @returns A promise that resolves with the data URL.
+ */
+function blobToDataURL(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+
+/**
+ * Retrieves the collection of image data URLs from Local Storage.
+ */
+function getCollection(): string[] {
+    const storedCollection = localStorage.getItem(COLLECTION_KEY);
+    return storedCollection ? JSON.parse(storedCollection) : [];
+}
+
+/**
+ * Saves a new image data URL to the collection in Local Storage.
+ * @param dataUrl The data URL of the image to save.
+ */
+function saveDataUrlToCollection(dataUrl: string) {
+    const collection = getCollection();
+    // To prevent storing huge amounts of data, let's limit the collection size
+    const MAX_COLLECTION_SIZE = 20; 
+    if (!collection.includes(dataUrl)) {
+        collection.unshift(dataUrl); // Add to the beginning
+        if (collection.length > MAX_COLLECTION_SIZE) {
+            collection.pop(); // Remove the oldest item
+        }
+        localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection));
+    }
+}
+
+/**
+ * Renders the image collection into the DOM.
+ */
+function renderCollection() {
+    const collection = getCollection();
+    collectionGrid.innerHTML = ''; // Clear existing items
+
+    if (collection.length > 0) {
+        collectionSection.style.display = 'block';
+    } else {
+        collectionSection.style.display = 'none';
+        return;
+    }
+
+    collection.forEach(dataUrl => {
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.alt = 'Chân dung La Mã đã tạo trước đây';
+        img.className = 'collection-item';
+        img.loading = 'lazy';
+        img.addEventListener('click', () => {
+            clearOutput();
+            outputPlaceholder.style.display = 'none';
+            resultImage.src = dataUrl;
+            resultCard.style.display = 'block';
+            downloadButton.style.display = 'block';
+        });
+        collectionGrid.appendChild(img);
+    });
+}
+
+/**
+ * Renders the current result card to a blob, converts to a data URL,
+ * saves it to local storage, and updates the collection UI.
+ */
+async function saveResultToCollection() {
+    try {
+        const blob = await generateCardBlob();
+        if (!blob) throw new Error("Could not generate image blob.");
+        
+        const dataUrl = await blobToDataURL(blob);
+        saveDataUrlToCollection(dataUrl);
+        renderCollection();
+    } catch (error) {
+        console.error("Failed to save result to collection:", error);
+    }
+}
+
+// --- INITIALIZATION ---
+updateUI();
+renderCollection(); // Load and display existing collection on startup

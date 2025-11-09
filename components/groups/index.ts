@@ -5,4 +5,5 @@
 
 export { GroupForm, type GroupFormData } from './GroupForm';
 export { GroupDetail } from './GroupDetail';
+export { GroupPermissionsEditor } from './GroupPermissionsEditor';
 

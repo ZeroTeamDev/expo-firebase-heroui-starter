@@ -21,9 +21,28 @@ import { Platform } from "react-native";
 
 // React Native Firebase Storage - only import on React Native
 let rnfbStorage: any = null;
-if (Platform.OS !== "web") {
+let rnfbStorageInitialized = false;
+
+/**
+ * Get React Native Firebase Storage instance
+ * Lazy initialization to avoid top-level await
+ */
+async function getReactNativeFirebaseStorage() {
+  if (rnfbStorageInitialized) {
+    return rnfbStorage;
+  }
+
+  if (Platform.OS === "web") {
+    return null;
+  }
+
+  rnfbStorageInitialized = true;
+
   try {
-    rnfbStorage = require("@react-native-firebase/storage").default;
+    // Dynamic import to avoid require() style import warning
+    const rnfbStorageModule = await import("@react-native-firebase/storage");
+    rnfbStorage = rnfbStorageModule.default;
+    return rnfbStorage;
   } catch (error) {
     // React Native Firebase Storage not available
     if (__DEV__) {
@@ -31,39 +50,6 @@ if (Platform.OS !== "web") {
         "[Storage] @react-native-firebase/storage not available:",
         error
       );
-    }
-  }
-}
-
-// Dynamic import for expo-file-system to avoid errors if not available
-// Try to use legacy API first to avoid deprecation warnings
-let FileSystemModule: any = null;
-async function getFileSystem() {
-  if (FileSystemModule) return FileSystemModule;
-  try {
-    // Try legacy API first (expo-file-system/legacy) to avoid deprecation warnings
-    try {
-      const legacyModule = await import("expo-file-system/legacy");
-      // Legacy module may not have default export
-      FileSystemModule = legacyModule;
-      if (__DEV__) {
-        console.log("[Storage] Using expo-file-system/legacy API");
-      }
-      return FileSystemModule;
-    } catch {
-      // Fallback to regular expo-file-system if legacy is not available
-      const module = await import("expo-file-system");
-      FileSystemModule = module.default || module;
-      if (__DEV__) {
-        console.log(
-          "[Storage] Using expo-file-system API (legacy not available)"
-        );
-      }
-      return FileSystemModule;
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.warn("[Storage] expo-file-system not available:", error);
     }
     return null;
   }
@@ -75,19 +61,25 @@ let storageInstance: ReturnType<typeof getStorage> | null = null;
  * Get Firebase Storage instance
  */
 function getStorageInstance() {
+  // Only needed for web platform
+  // React Native uses React Native Firebase Storage
+  if (Platform.OS !== "web") {
+    return null;
+  }
+
   if (storageInstance) {
     return storageInstance;
   }
 
   const app = getFirebaseApp();
   if (!app) {
-    throw new Error("Firebase app is not initialized");
+    throw new Error("Firebase app is not initialized (web platform)");
   }
 
   try {
     storageInstance = getStorage(app);
     if (__DEV__) {
-      console.log("[Storage] Firebase Storage instance initialized");
+      console.log("[Storage] Firebase Storage instance initialized (web)");
     }
     return storageInstance;
   } catch (error) {
@@ -119,114 +111,475 @@ export interface UploadResult {
 }
 
 /**
- * atob polyfill for React Native (if not available)
+ * Upload file to Firebase Storage
  */
-function atobPolyfill(base64: string): string {
-  // Manual base64 decode
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-  let output = "";
-
-  base64 = base64.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-
-  for (let i = 0; i < base64.length; i += 4) {
-    const enc1 = chars.indexOf(base64.charAt(i));
-    const enc2 = chars.indexOf(base64.charAt(i + 1));
-    const enc3 = chars.indexOf(base64.charAt(i + 2));
-    const enc4 = chars.indexOf(base64.charAt(i + 3));
-
-    const chr1 = (enc1 << 2) | (enc2 >> 4);
-    const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-    const chr3 = ((enc3 & 3) << 6) | enc4;
-
-    output += String.fromCharCode(chr1);
-
-    if (enc3 !== 64) {
-      output += String.fromCharCode(chr2);
+export async function uploadFile(
+  file:
+    | File
+    | Blob
+    | { uri: string; name: string; type?: string; size?: number },
+  storagePath: string,
+  options?: UploadFileOptions
+): Promise<UploadResult> {
+  // For web platform, get Firebase Storage instance
+  // For React Native, use React Native Firebase Storage
+  const storage = getStorageInstance();
+  
+  // Only create storageRef for web platform
+  let storageRef: StorageReference | null = null;
+  if (Platform.OS === "web") {
+    if (!storage) {
+      throw new Error("Firebase Storage is not initialized (web platform)");
     }
-    if (enc4 !== 64) {
-      output += String.fromCharCode(chr3);
+    storageRef = ref(storage, storagePath);
+  }
+
+  // fileData can be Blob/File (Web), or React Native file object with uri (React Native)
+  let fileData:
+    | Blob
+    | File
+    | { uri: string; name: string; type?: string; size?: number };
+  let fileName: string;
+  let fileSize: number;
+  let fileType: string;
+
+  // Handle different file types
+  if (file instanceof File) {
+    fileData = file;
+    fileName = file.name;
+    fileSize = file.size;
+    fileType = file.type;
+  } else if (file instanceof Blob) {
+    fileData = file;
+    fileName = "file";
+    fileSize = file.size;
+    fileType = file.type || "application/octet-stream";
+  } else {
+    // React Native file object with uri
+    fileName = file.name;
+    fileSize = file.size || 0;
+    fileType = file.type || "application/octet-stream";
+
+    // For React Native: File object with URI will be used directly with React Native Firebase Storage
+    // No need to read file into memory - putFile handles it natively
+    // For Web: convert URI to Blob
+    if (Platform.OS === "web") {
+      // Web: use fetch API to get Blob
+      try {
+        if (__DEV__) {
+          console.log("[Storage] Reading file from URI (web):", file.uri);
+        }
+        const response = await fetch(file.uri);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch file: ${response.status} ${response.statusText}`
+          );
+        }
+        fileData = await response.blob();
+        fileSize = file.size || (fileData instanceof Blob ? fileData.size : 0);
+        fileType =
+          file.type ||
+          response.headers.get("content-type") ||
+          "application/octet-stream";
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[Storage] Failed to read file:", error);
+        throw new Error(
+          `Failed to read file: ${errorMessage}. Please ensure the file exists and is accessible.`
+        );
+      }
+    } else {
+      // React Native: Keep file object with URI - React Native Firebase Storage will handle file reading
+      fileData = file;
+
+      if (__DEV__) {
+        console.log("[Storage] React Native file object prepared for upload:", {
+          uri: file.uri,
+          name: fileName,
+          type: fileType,
+          size: fileSize,
+          note: "Will use React Native Firebase Storage putFile to upload directly from URI",
+        });
+      }
     }
   }
 
-  return output;
-}
-
-/**
- * Convert base64 string to ArrayBuffer (binary data)
- * React Native compatible
- */
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  // Remove data URL prefix if present
-  const base64Data = base64.includes(",") ? base64.split(",")[1] : base64;
-
-  // Use atob or polyfill
-  const atobFn = typeof atob !== "undefined" ? atob : atobPolyfill;
-  const binaryString = atobFn(base64Data);
-  const bytes = new Uint8Array(binaryString.length);
-
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-
-  return bytes.buffer;
-}
-
-/**
- * Fallback: Upload base64 via multipart API
- * Used when resumable upload fails
- */
-async function uploadBase64ViaMultipartAPI(
-  storageRef: StorageReference,
-  base64String: string,
-  metadata: { contentType?: string; [key: string]: any },
-  idToken: string,
-  bucketId: string,
-  encodedPath: string,
-  binaryData: ArrayBuffer,
-  onProgress?: (progress: number) => void
-): Promise<any> {
-  // Get Firebase app to try different bucket formats
-  const firebaseApp = getFirebaseApp();
-  if (!firebaseApp) {
-    throw new Error("Firebase app not initialized");
-  }
-
-  const storageBucketFull = firebaseApp.options.storageBucket || bucketId;
-  const projectId = firebaseApp.options.projectId;
-
-  // Try different bucket formats - prioritize FULL bucket name first
-  // Based on download URL evidence: https://firebasestorage.googleapis.com/v0/b/superheroes-ee77d.firebasestorage.app/o/...
-  const bucketFormats = [
-    storageBucketFull, // Try full bucket name FIRST (matches download URL)
-    bucketId, // Then bucket ID (fallback)
-  ];
-
-  if (
-    projectId &&
-    projectId !== bucketId &&
-    !bucketFormats.includes(projectId)
-  ) {
-    bucketFormats.push(projectId);
-  }
+  const metadata = {
+    contentType: fileType,
+    ...options?.metadata,
+  };
 
   if (__DEV__) {
-    console.log(
-      "[Storage] Trying multipart upload with bucket formats (prioritizing full domain):",
-      {
-        formats: bucketFormats,
-        original: storageBucketFull,
-        bucketId,
-        projectId,
-        note: "Full bucket name is tried first (matches download URL format)",
-      }
-    );
+    console.log("[Storage] Uploading file:", {
+      fileName,
+      fileSize,
+      fileType,
+      storagePath,
+      platform: Platform.OS,
+      method:
+        Platform.OS === "web" ? "Firebase Web SDK" : "React Native Firebase",
+    });
   }
 
-  let lastError: Error | null = null;
+  try {
+    let snapshot: any;
+    let downloadURL: string | undefined;
 
-  // Try each bucket format
-  for (const bucketFormat of bucketFormats) {
+    // Use React Native Firebase Storage for React Native (upload directly from file URI)
+    // Use Firebase Web SDK for Web (upload Blob/File)
+    const rnfbStorageInstance = await getReactNativeFirebaseStorage();
+    if (
+      Platform.OS !== "web" &&
+      rnfbStorageInstance &&
+      file &&
+      "uri" in file &&
+      typeof file.uri === "string"
+    ) {
+      // React Native: Use React Native Firebase Storage with putFile
+      // This is the recommended approach - uploads directly from file URI
+      if (__DEV__) {
+        console.log(
+          "[Storage] Using React Native Firebase Storage with putFile:",
+          {
+            fileUri: file.uri,
+            storagePath,
+            contentType: metadata.contentType,
+          }
+        );
+      }
+
+      try {
+        // Create reference to storage path
+        const rnfbStorageRef = rnfbStorageInstance().ref(storagePath);
+
+        // Upload file directly from URI using putFile
+        // putFile handles all the complexity of reading and uploading the file
+        // Create metadata object without duplicate contentType
+        const { contentType, ...restMetadata } = metadata;
+        const uploadMetadata = {
+          contentType: contentType || fileType,
+          ...restMetadata,
+        };
+
+        const uploadTask = rnfbStorageRef.putFile(file.uri, uploadMetadata);
+
+        // Handle progress if callback provided
+        if (options?.onProgress) {
+          uploadTask.on("state_changed", (taskSnapshot: any) => {
+            const progress =
+              (taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100;
+            options.onProgress?.(progress);
+          });
+        }
+
+        // Wait for upload to complete
+        await uploadTask;
+
+        // Get download URL
+        const rnfbDownloadURL = await rnfbStorageRef.getDownloadURL();
+
+        if (__DEV__) {
+          console.log(
+            "[Storage] ✅ File uploaded successfully using React Native Firebase:",
+            {
+              storagePath,
+              downloadURL: rnfbDownloadURL,
+              fileSize,
+            }
+          );
+        }
+
+        // Return result - rnfbDownloadURL is guaranteed to be string
+        return {
+          storagePath,
+          downloadURL: rnfbDownloadURL,
+          metadata: {
+            size: fileSize,
+            contentType: fileType,
+            fullPath: storagePath,
+          },
+        };
+      } catch (rnfbError) {
+        const errorMessage =
+          rnfbError instanceof Error ? rnfbError.message : "Unknown error";
+        if (__DEV__) {
+          console.error(
+            "[Storage] React Native Firebase Storage upload failed:",
+            rnfbError
+          );
+        }
+        throw new Error(
+          `Failed to upload file using React Native Firebase: ${errorMessage}`
+        );
+      }
+    } else if (Platform.OS === "web") {
+      // Web: use Firebase Web SDK with Blob/File
+      if (!fileData || typeof fileData !== "object") {
+        throw new Error("Web platform requires Blob or File object for upload");
+      }
+
+      // Type guard for Blob/File
+      const isBlobOrFile = (obj: any): obj is Blob | File => {
+        return obj instanceof Blob || obj instanceof File;
+      };
+
+      if (!isBlobOrFile(fileData)) {
+        throw new Error("Web platform requires Blob or File object for upload");
+      }
+
+      const binaryData: Blob | File = fileData;
+
+      if (__DEV__) {
+        const dataType = binaryData instanceof File ? "File" : "Blob";
+        const size = binaryData.size;
+        console.log("[Storage] Using Firebase Web SDK uploadBytes:", {
+          dataType,
+          platform: Platform.OS,
+          size,
+        });
+      }
+
+      if (!storageRef) {
+        throw new Error("Storage reference is not available (web platform)");
+      }
+
+      const uploadTask = uploadBytes(storageRef, binaryData, metadata);
+
+      // Handle progress if callback provided
+      if (options?.onProgress) {
+        // Note: uploadBytes doesn't support progress tracking directly
+        // For progress tracking, we would need to use uploadBytesResumable
+        // For now, we'll just call the callback with 100% after upload
+        uploadTask.then(() => {
+          options.onProgress?.(100);
+        });
+      }
+
+      snapshot = await uploadTask;
+    } else {
+      // Fallback: React Native without React Native Firebase
+      // This should not happen if @react-native-firebase/storage is installed
+      throw new Error(
+        "React Native Firebase Storage is not available. Please install @react-native-firebase/storage and rebuild the app."
+      );
+    }
+
+    // Get download URL for Web platform
+    // React Native Firebase already returned and exited above, so this is only for Web
+    if (Platform.OS === "web" && snapshot && storageRef) {
+      if (__DEV__) {
+        console.log(
+          "[Storage] File uploaded successfully:",
+          snapshot.ref?.fullPath || storagePath
+        );
+      }
+
+      try {
+        // Ensure we have a valid StorageReference
+        // For Web SDK uploads, snapshot.ref should be valid
+        let fileRef: StorageReference = snapshot.ref;
+
+        // If ref is not valid or missing, recreate it from the storage path
+        if (!fileRef || !fileRef.fullPath) {
+          if (!storage) {
+            throw new Error("Storage instance is not available (web platform)");
+          }
+          fileRef = ref(storage, storagePath);
+        }
+
+        // Use SDK's getDownloadURL - this is the most reliable method
+        // It handles token generation, URL encoding, and ensures the URL returns file content
+        // IMPORTANT: getDownloadURL generates a URL that returns the actual file content,
+        // not JSON metadata. This is the correct way to get download URLs.
+        downloadURL = await getDownloadURL(fileRef);
+
+        if (__DEV__) {
+          console.log("[Storage] ✅ Got download URL from SDK:", {
+            downloadURL,
+            path: fileRef.fullPath,
+            note: "SDK-generated URLs are guaranteed to return file content, not JSON metadata",
+          });
+
+          // Verify URL format
+          if (downloadURL && !downloadURL.includes("alt=media")) {
+            console.warn(
+              "[Storage] ⚠️ Download URL doesn't contain 'alt=media' - this may cause issues"
+            );
+          }
+        }
+      } catch (sdkError) {
+        // SDK failed - this should not happen in normal cases
+        // But if it does, we'll log the error and throw a helpful message
+        const errorMessage =
+          sdkError instanceof Error ? sdkError.message : "Unknown error";
+
+        console.error("[Storage] ❌ Failed to get download URL from SDK:", {
+          error: errorMessage,
+          path: snapshot?.ref?.fullPath || storagePath,
+          note: "This usually means the file upload failed or storage permissions are incorrect",
+        });
+
+        throw new Error(
+          `Failed to get download URL: ${errorMessage}. ` +
+            `The file may not have been uploaded correctly, or there may be a permissions issue. ` +
+            `Please check Firebase Storage rules and ensure the upload completed successfully.`
+        );
+      }
+
+      if (!downloadURL) {
+        throw new Error(
+          "Failed to get download URL. The file may not have been uploaded correctly."
+        );
+      }
+
+      if (__DEV__) {
+        console.log("[Storage] Download URL obtained:", downloadURL);
+      }
+
+      return {
+        storagePath,
+        downloadURL: downloadURL as string, // Type assertion: downloadURL is string here
+        metadata: {
+          size: fileSize,
+          contentType: fileType,
+          fullPath: snapshot?.ref?.fullPath || storagePath,
+        },
+      };
+    } else {
+      // This should not happen - React Native should have returned above
+      throw new Error(
+        "Upload completed but download URL was not obtained. This is an unexpected state."
+      );
+    }
+  } catch (error) {
+    console.error("[Storage] Upload failed:", error);
+    console.error("[Storage] Error details:", {
+      code: (error as any)?.code,
+      message: error instanceof Error ? error.message : "Unknown error",
+      serverResponse: (error as any)?.serverResponse,
+      storagePath,
+      fileName,
+      fileSize,
+      fileType,
+    });
+
+    // Provide more helpful error messages
+    if (error instanceof Error) {
+      // Check for specific Firebase Storage errors
+      if (error.message.includes("storage/unknown")) {
+        throw new Error(
+          `Firebase Storage error: An unknown error occurred. ` +
+            `Please check: 1) Firebase Storage is enabled in your Firebase Console, ` +
+            `2) Storage security rules allow uploads, ` +
+            `3) User is authenticated. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/unauthorized")) {
+        throw new Error(
+          `Firebase Storage error: User is not authorized to upload files. ` +
+            `Please check Storage security rules. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/quota-exceeded")) {
+        throw new Error(
+          `Firebase Storage error: Storage quota exceeded. ` +
+            `Please check your Firebase Storage quota. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/unauthenticated")) {
+        throw new Error(
+          `Firebase Storage error: User is not authenticated. ` +
+            `Please log in and try again. ` +
+            `Original error: ${error.message}`
+        );
+      }
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Get download URL for file
+ */
+export async function getFileUrl(storagePath: string): Promise<string> {
+  const storage = getStorageInstance();
+  if (!storage) {
+    throw new Error("Firebase Storage is not initialized (web platform)");
+  }
+  const storageRef = ref(storage, storagePath);
+  return await getDownloadURL(storageRef);
+}
+
+/**
+ * Delete file from Firebase Storage
+ */
+export async function deleteFileFromStorage(storagePath: string): Promise<void> {
+  const storage = getStorageInstance();
+  if (!storage) {
+    throw new Error("Firebase Storage is not initialized (web platform)");
+  }
+  const storageRef = ref(storage, storagePath);
+  await deleteObject(storageRef);
+}
+
+/**
+ * Validate file size
+ */
+export function validateFileSize(fileSize: number, maxSize: number): {
+  valid: boolean;
+  error?: string;
+} {
+  if (fileSize > maxSize) {
+    return {
+      valid: false,
+      error: `File size exceeds maximum allowed size of ${formatFileSize(maxSize)}`,
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validate file type
+ */
+export function validateFileType(
+  mimeType: string,
+  allowedTypes: string[]
+): {
+  valid: boolean;
+  error?: string;
+} {
+  if (allowedTypes.length === 0) {
+    // No restrictions
+    return { valid: true };
+  }
+
+  if (!allowedTypes.includes(mimeType)) {
+    return {
+      valid: false,
+      error: `File type ${mimeType} is not allowed. Allowed types: ${allowedTypes.join(', ')}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Format file size to human-readable string
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
     try {
       const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketFormat}/o?name=${encodedPath}&uploadType=multipart`;
 
@@ -706,10 +1059,17 @@ async function uploadBase64ViaRESTAPI(
     throw new Error("User must be authenticated to upload files");
   }
 
-  // Get Firebase config
+  // Get Firebase config (only for web platform)
+  // React Native uses React Native Firebase Storage (doesn't need this)
+  if (Platform.OS !== "web") {
+    throw new Error(
+      "REST API upload only supported on web platform. Use React Native Firebase Storage on mobile."
+    );
+  }
+
   const firebaseApp = getFirebaseApp();
   if (!firebaseApp) {
-    throw new Error("Firebase app not initialized");
+    throw new Error("Firebase app not initialized (web platform)");
   }
 
   let storageBucket = firebaseApp.options.storageBucket;
@@ -1252,9 +1612,10 @@ export async function uploadFile(
 
     // Use React Native Firebase Storage for React Native (upload directly from file URI)
     // Use Firebase Web SDK for Web (upload Blob/File)
+    const rnfbStorageInstance = await getReactNativeFirebaseStorage();
     if (
       Platform.OS !== "web" &&
-      rnfbStorage &&
+      rnfbStorageInstance &&
       file &&
       "uri" in file &&
       typeof file.uri === "string"
@@ -1274,7 +1635,7 @@ export async function uploadFile(
 
       try {
         // Create reference to storage path
-        const rnfbStorageRef = rnfbStorage().ref(storagePath);
+        const rnfbStorageRef = rnfbStorageInstance().ref(storagePath);
 
         // Upload file directly from URI using putFile
         // putFile handles all the complexity of reading and uploading the file

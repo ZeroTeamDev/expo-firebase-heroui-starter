@@ -32,8 +32,21 @@ export interface FileMetadata {
   accessibleBy: string[];
   isPublic: boolean;
   isAppFile: boolean;
+  downloadURL?: string; // Optional: cached download URL (may expire)
   createdAt: any;
   updatedAt: any;
+}
+
+export interface GroupPermissions {
+  canUploadFiles?: boolean;
+  canDeleteFiles?: boolean;
+  canShareFiles?: boolean;
+  canManageMembers?: boolean;
+  canEditGroup?: boolean;
+  canViewFiles?: boolean;
+  maxFileSize?: number; // in bytes
+  maxFileCount?: number;
+  allowedFileTypes?: string[]; // MIME types or extensions
 }
 
 export interface GroupMetadata {
@@ -42,6 +55,7 @@ export interface GroupMetadata {
   description?: string;
   ownerId: string;
   memberIds: string[];
+  permissions?: GroupPermissions; // Group-specific permissions
   createdAt: any;
   updatedAt: any;
 }
@@ -185,7 +199,11 @@ export async function canAccessFile(userId: string, fileId: string): Promise<boo
 /**
  * Check if user can upload file (check limits)
  */
-export async function canUploadFile(userId: string, fileSize: number): Promise<{
+export async function canUploadFile(
+  userId: string,
+  fileSize: number,
+  groupId?: string | null
+): Promise<{
   allowed: boolean;
   reason?: string;
 }> {
@@ -195,29 +213,92 @@ export async function canUploadFile(userId: string, fileSize: number): Promise<{
     return { allowed: false, reason: 'File management is disabled' };
   }
 
-  // Check file size
-  if (fileSize > config.maxFileSize) {
-    return {
-      allowed: false,
-      reason: `File size exceeds maximum allowed size of ${config.maxFileSize} bytes`,
-    };
-  }
-
-  // Check file count limit
+  // Get user profile
   const userProfile = await getUserProfile(userId);
   if (!userProfile) {
     return { allowed: false, reason: 'User profile not found' };
   }
 
-  const maxFileCount = userProfile.groupId
-    ? config.maxFileCountWithGroup
-    : config.maxFileCount;
+  // If uploading to a group, check group permissions
+  let groupPermissions: GroupPermissions | undefined;
+  if (groupId) {
+    const { getGroup } = await import('@/services/groups/group.service');
+    const group = await getGroup(groupId);
+    
+    if (!group) {
+      return { allowed: false, reason: 'Group not found' };
+    }
 
-  if (userProfile.fileUploadCount >= maxFileCount) {
-    return {
-      allowed: false,
-      reason: `File upload limit reached. Maximum ${maxFileCount} files allowed.`,
-    };
+    // Check group permissions
+    groupPermissions = group.permissions;
+    if (groupPermissions) {
+      // Check if user can upload files to this group
+      if (groupPermissions.canUploadFiles === false) {
+        return { allowed: false, reason: 'You do not have permission to upload files to this group' };
+      }
+
+      // Check group file size limit (group limit takes precedence)
+      if (groupPermissions.maxFileSize) {
+        if (fileSize > groupPermissions.maxFileSize) {
+          const maxSizeMB = (groupPermissions.maxFileSize / (1024 * 1024)).toFixed(2);
+          return {
+            allowed: false,
+            reason: `File size exceeds group maximum of ${maxSizeMB} MB`,
+          };
+        }
+      } else {
+        // No group limit, use global limit
+        if (fileSize > config.maxFileSize) {
+          const maxSizeMB = (config.maxFileSize / (1024 * 1024)).toFixed(2);
+          return {
+            allowed: false,
+            reason: `File size exceeds maximum allowed size of ${maxSizeMB} MB`,
+          };
+        }
+      }
+
+      // Check group file count limit
+      if (groupPermissions.maxFileCount) {
+        const { getGroupFiles } = await import('@/services/files/file.service');
+        const groupFiles = await getGroupFiles(groupId);
+        if (groupFiles.length >= groupPermissions.maxFileCount) {
+          return {
+            allowed: false,
+            reason: `Group file limit reached. Maximum ${groupPermissions.maxFileCount} files allowed in this group.`,
+          };
+        }
+      }
+    } else {
+      // No group permissions, use global limits
+      if (fileSize > config.maxFileSize) {
+        const maxSizeMB = (config.maxFileSize / (1024 * 1024)).toFixed(2);
+        return {
+          allowed: false,
+          reason: `File size exceeds maximum allowed size of ${maxSizeMB} MB`,
+        };
+      }
+    }
+  } else {
+    // Not uploading to group, check global file size limit
+    if (fileSize > config.maxFileSize) {
+      const maxSizeMB = (config.maxFileSize / (1024 * 1024)).toFixed(2);
+      return {
+        allowed: false,
+        reason: `File size exceeds maximum allowed size of ${maxSizeMB} MB`,
+      };
+    }
+
+    // Check user file count limit (personal files only)
+    const maxFileCount = userProfile.groupId
+      ? config.maxFileCountWithGroup
+      : config.maxFileCount;
+
+    if (userProfile.fileUploadCount >= maxFileCount) {
+      return {
+        allowed: false,
+        reason: `File upload limit reached. Maximum ${maxFileCount} files allowed.`,
+      };
+    }
   }
 
   return { allowed: true };

@@ -5,18 +5,30 @@
  * Form for creating and editing groups
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from 'heroui-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { FormInput } from '@/components/forms/FormInput';
-import type { GroupMetadata } from '@/services/permissions/permission.service';
+import { GroupPermissionsEditor } from './GroupPermissionsEditor';
+import type { GroupMetadata, GroupPermissions } from '@/services/permissions/permission.service';
 
 const groupSchema = z.object({
   name: z.string().min(1, 'Group name is required').max(100, 'Group name is too long'),
   description: z.string().max(500, 'Description is too long').optional(),
+  permissions: z.object({
+    canUploadFiles: z.boolean().optional(),
+    canDeleteFiles: z.boolean().optional(),
+    canShareFiles: z.boolean().optional(),
+    canManageMembers: z.boolean().optional(),
+    canEditGroup: z.boolean().optional(),
+    canViewFiles: z.boolean().optional(),
+    maxFileSize: z.number().optional(),
+    maxFileCount: z.number().optional(),
+    allowedFileTypes: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 export type GroupFormData = z.infer<typeof groupSchema>;
@@ -31,17 +43,36 @@ interface GroupFormProps {
 export function GroupForm({ group, onSubmit, onCancel, loading }: GroupFormProps) {
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+
+  // Default permissions
+  const defaultPermissions: GroupPermissions = {
+    canUploadFiles: true,
+    canDeleteFiles: true,
+    canShareFiles: true,
+    canManageMembers: false,
+    canEditGroup: false,
+    canViewFiles: true,
+    maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxFileCount: 100,
+    allowedFileTypes: [],
+  };
+
+  const [permissions, setPermissions] = useState<GroupPermissions>(
+    group?.permissions || defaultPermissions
+  );
   
   const {
     control,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<GroupFormData>({
     resolver: zodResolver(groupSchema),
     defaultValues: {
       name: group?.name || '',
       description: group?.description || '',
+      permissions: group?.permissions || defaultPermissions,
     },
   });
 
@@ -50,12 +81,21 @@ export function GroupForm({ group, onSubmit, onCancel, loading }: GroupFormProps
       reset({
         name: group.name,
         description: group.description || '',
+        permissions: group.permissions || defaultPermissions,
       });
+      setPermissions(group.permissions || defaultPermissions);
     }
   }, [group, reset]);
 
+  useEffect(() => {
+    setValue('permissions', permissions);
+  }, [permissions, setValue]);
+
   const handleFormSubmit = async (data: GroupFormData) => {
-    await onSubmit(data);
+    await onSubmit({
+      ...data,
+      permissions,
+    });
   };
 
   return (
@@ -102,6 +142,16 @@ export function GroupForm({ group, onSubmit, onCancel, loading }: GroupFormProps
             />
           )}
         />
+
+        {/* Permissions Section */}
+        <View style={styles.permissionsSection}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Group Permissions</Text>
+          <GroupPermissionsEditor
+            permissions={permissions}
+            onChange={setPermissions}
+            disabled={loading}
+          />
+        </View>
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -175,6 +225,16 @@ const styles = StyleSheet.create({
   },
   fieldContainer: {
     marginBottom: 20,
+  },
+  permissionsSection: {
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    paddingHorizontal: 4,
   },
   actions: {
     flexDirection: 'row',

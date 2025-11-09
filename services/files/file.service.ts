@@ -22,7 +22,7 @@ import type { FileMetadata } from '@/services/permissions/permission.service';
 
 export interface CreateFileData {
   name: string;
-  type: 'personal' | 'app' | 'group';
+  type: "personal" | "app" | "group";
   ownerId: string;
   groupId?: string;
   storagePath: string;
@@ -31,6 +31,7 @@ export interface CreateFileData {
   accessibleBy?: string[];
   isPublic?: boolean;
   isAppFile?: boolean;
+  downloadURL?: string; // Optional: download URL for quick access
   metadata?: Record<string, any>;
 }
 
@@ -75,27 +76,49 @@ function generateStoragePath(
 /**
  * Create file metadata in Firestore
  */
-export async function createFileMetadata(fileData: CreateFileData): Promise<string> {
-  const fileMetadata = {
+export async function createFileMetadata(
+  fileData: CreateFileData
+): Promise<string> {
+  // Build metadata object, only including fields that are not undefined
+  // Firestore does not accept undefined values - must be null or omitted
+  const fileMetadata: Record<string, any> = {
     name: fileData.name,
     type: fileData.type,
     ownerId: fileData.ownerId,
-    groupId: fileData.groupId,
     storagePath: fileData.storagePath,
     mimeType: fileData.mimeType,
     size: fileData.size,
     accessibleBy: fileData.accessibleBy || [],
-    isPublic: fileData.isPublic || false,
-    isAppFile: fileData.isAppFile || false,
+    isPublic: fileData.isPublic ?? false,
+    isAppFile: fileData.isAppFile ?? false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
-  const fileId = await createDocumentWithId('files', fileMetadata);
-  
+  // Only add groupId if it's defined (not undefined)
+  // If it's null, we still include it (null is valid in Firestore)
+  if (fileData.groupId !== undefined) {
+    fileMetadata.groupId = fileData.groupId;
+  }
+
+  // Only add downloadURL if it's defined
+  if (fileData.downloadURL !== undefined) {
+    fileMetadata.downloadURL = fileData.downloadURL;
+  }
+
+  // Only add metadata if it's defined and not empty
+  if (
+    fileData.metadata !== undefined &&
+    Object.keys(fileData.metadata).length > 0
+  ) {
+    fileMetadata.metadata = fileData.metadata;
+  }
+
+  const fileId = await createDocumentWithId("files", fileMetadata);
+
   // Update document with the ID field
   await updateDocument(`files/${fileId}`, { id: fileId });
-  
+
   return fileId;
 }
 
@@ -110,7 +133,27 @@ export async function uploadFileWithMetadata(
 
   // Validate file management is enabled
   if (!config.enableFileManagement) {
-    throw new Error('File management is disabled');
+    throw new Error("File management is disabled");
+  }
+
+  // Get file size from upload data
+  const fileSize =
+    uploadData.file instanceof File
+      ? uploadData.file.size
+      : uploadData.file.size || 0;
+
+  // Check if user can upload file (includes group permissions check)
+  const { canUploadFile } = await import(
+    "@/services/permissions/permission.service"
+  );
+  const uploadPermission = await canUploadFile(
+    userId,
+    fileSize,
+    uploadData.groupId
+  );
+
+  if (!uploadPermission.allowed) {
+    throw new Error(uploadPermission.reason || "File upload not allowed");
   }
 
   // Generate storage path
@@ -122,11 +165,18 @@ export async function uploadFileWithMetadata(
   );
 
   // Upload file to storage
-  const uploadResult: UploadResult = await uploadFile(uploadData.file, storagePath, {
-    metadata: {
-      contentType: uploadData.file instanceof File ? uploadData.file.type : uploadData.file.type || 'application/octet-stream',
-    },
-  });
+  const uploadResult: UploadResult = await uploadFile(
+    uploadData.file,
+    storagePath,
+    {
+      metadata: {
+        contentType:
+          uploadData.file instanceof File
+            ? uploadData.file.type
+            : uploadData.file.type || "application/octet-stream",
+      },
+    }
+  );
 
   // Create file metadata
   const fileId = await createFileMetadata({
@@ -137,6 +187,7 @@ export async function uploadFileWithMetadata(
     storagePath: uploadResult.storagePath,
     mimeType: uploadResult.metadata.contentType,
     size: uploadResult.metadata.size,
+    downloadURL: uploadResult.downloadURL, // Store download URL for quick access
     isPublic: uploadData.isPublic,
     isAppFile: uploadData.isAppFile,
     metadata: uploadData.metadata,
@@ -158,10 +209,20 @@ export async function updateFileMetadata(
   fileId: string,
   updates: Partial<CreateFileData>
 ): Promise<void> {
-  await updateDocument(`files/${fileId}`, {
-    ...updates,
+  // Filter out undefined values - Firestore does not accept undefined
+  const cleanUpdates: Record<string, any> = {
     updatedAt: new Date(),
+  };
+
+  // Only include defined fields (undefined values are excluded)
+  Object.keys(updates).forEach((key) => {
+    const value = (updates as any)[key];
+    if (value !== undefined) {
+      cleanUpdates[key] = value;
+    }
   });
+
+  await updateDocument(`files/${fileId}`, cleanUpdates);
 }
 
 /**

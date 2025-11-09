@@ -28,6 +28,17 @@ export interface CreateGroupData {
   description?: string;
   ownerId: string;
   memberIds?: string[];
+  permissions?: {
+    canUploadFiles?: boolean;
+    canDeleteFiles?: boolean;
+    canShareFiles?: boolean;
+    canManageMembers?: boolean;
+    canEditGroup?: boolean;
+    canViewFiles?: boolean;
+    maxFileSize?: number; // in bytes
+    maxFileCount?: number;
+    allowedFileTypes?: string[]; // MIME types or extensions
+  };
   settings?: {
     maxFileSize?: number;
     maxFileCount?: number;
@@ -38,6 +49,17 @@ export interface UpdateGroupData {
   name?: string;
   description?: string;
   memberIds?: string[];
+  permissions?: {
+    canUploadFiles?: boolean;
+    canDeleteFiles?: boolean;
+    canShareFiles?: boolean;
+    canManageMembers?: boolean;
+    canEditGroup?: boolean;
+    canViewFiles?: boolean;
+    maxFileSize?: number; // in bytes
+    maxFileCount?: number;
+    allowedFileTypes?: string[]; // MIME types or extensions
+  };
   settings?: {
     maxFileSize?: number;
     maxFileCount?: number;
@@ -62,11 +84,25 @@ export async function createGroup(
     throw new Error('Only admins and moderators can create groups');
   }
 
+  // Default permissions for new groups
+  const defaultPermissions = {
+    canUploadFiles: true,
+    canDeleteFiles: true,
+    canShareFiles: true,
+    canManageMembers: false, // Only owner/admin can manage by default
+    canEditGroup: false, // Only owner/admin can edit by default
+    canViewFiles: true,
+    maxFileSize: groupData.settings?.maxFileSize || 10 * 1024 * 1024, // 10MB default
+    maxFileCount: groupData.settings?.maxFileCount || 100, // 100 files default
+    allowedFileTypes: [],
+  };
+
   const group: Omit<GroupMetadata, 'id'> = {
     name: groupData.name,
     description: groupData.description,
     ownerId: groupData.ownerId,
     memberIds: groupData.memberIds || [],
+    permissions: groupData.permissions || defaultPermissions,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

@@ -6,10 +6,10 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from 'heroui-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import type { GroupMetadata } from '@/services/permissions/permission.service';
+import type { GroupMetadata, GroupPermissions } from '@/services/permissions/permission.service';
 import type { UserProfile } from '@/services/permissions/permission.service';
 
 interface GroupDetailProps {
@@ -61,8 +61,29 @@ export function GroupDetail({
     </View>
   );
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
+
+  const permissions: GroupPermissions = group.permissions || {
+    canUploadFiles: true,
+    canDeleteFiles: true,
+    canShareFiles: true,
+    canManageMembers: false,
+    canEditGroup: false,
+    canViewFiles: true,
+    maxFileSize: 10 * 1024 * 1024,
+    maxFileCount: 100,
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={[styles.header, { backgroundColor: colors.surface1 }]}>
         <View style={styles.headerContent}>
           <Text style={[styles.groupName, { color: colors.foreground }]}>{group.name}</Text>
@@ -89,6 +110,74 @@ export function GroupDetail({
         </View>
       </View>
 
+      {/* Permissions Section */}
+      <View style={styles.permissionsSection}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Group Permissions</Text>
+        <View style={[styles.permissionsCard, { backgroundColor: colors.surface1, borderColor: colors.border }]}>
+          <View style={styles.permissionRow}>
+            <Text style={[styles.permissionLabel, { color: colors.foreground }]}>View Files</Text>
+            <IconSymbol
+              name={permissions.canViewFiles ? 'checkmark.circle.fill' : 'xmark.circle.fill'}
+              size={20}
+              color={permissions.canViewFiles ? colors.accent : colors.mutedForeground}
+            />
+          </View>
+          <View style={styles.permissionRow}>
+            <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Upload Files</Text>
+            <IconSymbol
+              name={permissions.canUploadFiles ? 'checkmark.circle.fill' : 'xmark.circle.fill'}
+              size={20}
+              color={permissions.canUploadFiles ? colors.accent : colors.mutedForeground}
+            />
+          </View>
+          <View style={styles.permissionRow}>
+            <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Delete Files</Text>
+            <IconSymbol
+              name={permissions.canDeleteFiles ? 'checkmark.circle.fill' : 'xmark.circle.fill'}
+              size={20}
+              color={permissions.canDeleteFiles ? colors.accent : colors.mutedForeground}
+            />
+          </View>
+          <View style={styles.permissionRow}>
+            <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Share Files</Text>
+            <IconSymbol
+              name={permissions.canShareFiles ? 'checkmark.circle.fill' : 'xmark.circle.fill'}
+              size={20}
+              color={permissions.canShareFiles ? colors.accent : colors.mutedForeground}
+            />
+          </View>
+          <View style={styles.permissionRow}>
+            <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Manage Members</Text>
+            <IconSymbol
+              name={permissions.canManageMembers ? 'checkmark.circle.fill' : 'xmark.circle.fill'}
+              size={20}
+              color={permissions.canManageMembers ? colors.accent : colors.mutedForeground}
+            />
+          </View>
+          <View style={styles.permissionRow}>
+            <Text style={[styles.permissionLabel, { color: colors.foreground }]}>Edit Group</Text>
+            <IconSymbol
+              name={permissions.canEditGroup ? 'checkmark.circle.fill' : 'xmark.circle.fill'}
+              size={20}
+              color={permissions.canEditGroup ? colors.accent : colors.mutedForeground}
+            />
+          </View>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={styles.limitRow}>
+            <Text style={[styles.limitLabel, { color: colors.foreground }]}>Max File Size</Text>
+            <Text style={[styles.limitValue, { color: colors.accent }]}>
+              {formatFileSize(permissions.maxFileSize || 10 * 1024 * 1024)}
+            </Text>
+          </View>
+          <View style={styles.limitRow}>
+            <Text style={[styles.limitLabel, { color: colors.foreground }]}>Max File Count</Text>
+            <Text style={[styles.limitValue, { color: colors.accent }]}>
+              {permissions.maxFileCount || 100}
+            </Text>
+          </View>
+        </View>
+      </View>
+
       <View style={styles.membersSection}>
         <View style={styles.membersHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Members</Text>
@@ -112,10 +201,11 @@ export function GroupDetail({
             renderItem={renderMemberItem}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
           />
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -161,9 +251,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  permissionsSection: {
+    padding: 16,
+    marginTop: 8,
+  },
+  permissionsCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+  },
+  permissionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  permissionLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    marginVertical: 8,
+  },
+  limitRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  limitLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  limitValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
+    marginBottom: 12,
   },
   addButton: {
     flexDirection: 'row',
