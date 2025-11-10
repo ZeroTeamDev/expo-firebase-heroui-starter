@@ -12,6 +12,12 @@
     "rebuild:native": "bash scripts/rebuild-native-modules.sh",
     "functions:build": "cd functions && npm run build",
     "functions:deploy": "bash scripts/deploy-functions.sh",
+    "functions:deploy:uploadFile": "bash scripts/deploy-functions.sh uploadFile",
+    "functions:check": "bash scripts/deploy-functions.sh --check",
+    "functions:verify": "bash scripts/check-functions.sh",
+    "prebuild": "bash scripts/prebuild-check.sh",
+    "prebuild:android": "bash scripts/prebuild-check.sh",
+    "prebuild:ios": "bash scripts/prebuild-check.sh",
     "cli": "npx tsx tools/cli/index.ts",
     "postinstall": "patch-package"
   },

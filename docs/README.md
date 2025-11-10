@@ -9,6 +9,7 @@ Complete documentation for the Expo Firebase HeroUI Starter Kit.
 - **[Quick Start Guide](./quick-start.md)** - Get up and running quickly
 - **[Getting Started](./GETTING_STARTED.md)** - Detailed getting started guide
 - **[Project Structure](./architecture.md)** - Project architecture and structure
+- **[Starter Kit Complete Guide](./STARTER_GUIDE.md)** - Comprehensive overview of features and extension paths
 
 ## 🛠️ Developer Tools
 
