@@ -1,145 +1,336 @@
-// Import the functions you need from the SDKs you need
-import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
-import { FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
+/**
+ * Firebase Client Integration
+ * Created by Kien AI (leejungkiin@gmail.com)
+ *
+ * Firebase initialization and auth utilities
+ */
 
 import {
-  Auth,
-  createUserWithEmailAndPassword,
+  initializeApp,
+  getApps,
+  FirebaseApp,
+  FirebaseOptions,
+} from "firebase/app";
+import {
   getAuth,
-  getReactNativePersistence,
   initializeAuth,
-  signInWithEmailAndPassword,
+  getReactNativePersistence,
+  Auth,
   signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithCredential,
+  User,
 } from "firebase/auth";
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { Firestore, getFirestore } from "firebase/firestore";
-import { FirebaseStorage, getStorage } from "firebase/storage";
-import {
-  getRemoteConfig,
-  RemoteConfig,
-  fetchAndActivate,
-  getValue,
-  getAll,
-  activate,
-  fetchConfig,
-  isSupported,
-} from "firebase/remote-config";
-
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
-
-// Initialize Firebase - check if app already exists to avoid duplicate initialization
-export const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-
-// Initialize Auth with AsyncStorage persistence - check if auth already exists
-let auth: Auth;
-try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-  });
-} catch (error: any) {
-  // If auth already initialized, get the existing instance
-  if (error.code === "auth/already-initialized") {
-    auth = getAuth(app);
-  } else {
-    throw error;
-  }
-}
-export { auth };
-
-export const db: Firestore = getFirestore(app);
-export const storage: FirebaseStorage = getStorage(app);
-
-// Initialize Remote Config
-let remoteConfig: RemoteConfig | null = null;
+let app: FirebaseApp | null = null;
+let authInstance: Auth | null = null;
+let initializationAttempted = false;
 
 /**
- * Get Remote Config instance
- * Initializes Remote Config on first call
+ * Get Firebase config from environment variables
+ * For React Native, we need to initialize Firebase Web SDK with explicit config
+ *
+ * Required environment variables:
+ * - EXPO_PUBLIC_FIREBASE_API_KEY
+ * - EXPO_PUBLIC_FIREBASE_PROJECT_ID
+ * - EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN
+ * - EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET
+ * - EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ * - EXPO_PUBLIC_FIREBASE_APP_ID
+ *
+ * Optional:
+ * - EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID (only for web, not needed for React Native)
+ * - EXPO_PUBLIC_FIREBASE_DATABASE_URL (for Realtime Database)
  */
-export function getRemoteConfigInstance(): RemoteConfig {
-  if (!remoteConfig) {
-    try {
-      console.log("[Firebase] Creating Remote Config instance...");
-      remoteConfig = getRemoteConfig(app);
-      console.log("[Firebase] Remote Config instance created successfully");
+function getFirebaseConfig(): FirebaseOptions | null {
+  // Check required environment variables
+  const requiredVars = [
+    "EXPO_PUBLIC_FIREBASE_API_KEY",
+    "EXPO_PUBLIC_FIREBASE_PROJECT_ID",
+    "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "EXPO_PUBLIC_FIREBASE_APP_ID",
+  ];
 
-      // Set default Remote Config settings
-      // For development, use shorter interval
-      const isDev = __DEV__;
-      remoteConfig.settings = {
-        minimumFetchIntervalMillis: isDev ? 0 : 3600000, // 0 for dev (no cache), 1 hour for prod
-        fetchTimeoutMillis: 60000, // 60 seconds
-      };
-      console.log("[Firebase] Remote Config settings configured:", remoteConfig.settings);
+  const missingVars = requiredVars.filter((varName) => !process.env[varName]);
 
-      // Note: setDefaults() is not available in Firebase JS SDK for React Native
-      // Default values should be set in Firebase Console
-      // The service will use defaults from Firebase Console or cached values
-      console.log("[Firebase] Remote Config instance ready (defaults should be set in Firebase Console)");
-    } catch (error: any) {
-      console.error("[Firebase] Error creating Remote Config instance:", error);
-      console.error("[Firebase] Error details:", {
-        message: error?.message,
-        code: error?.code,
-        name: error?.name,
-      });
-      throw error;
+  if (missingVars.length > 0) {
+    if (__DEV__) {
+      console.error(
+        "[Firebase] Missing required environment variables:",
+        missingVars.join(", ")
+      );
+      console.error(
+        "[Firebase] Please set these variables in your .env file or environment."
+      );
+      console.error(
+        "[Firebase] You can get these values from Firebase Console → Project Settings → Your apps"
+      );
     }
+    return null;
   }
 
-  return remoteConfig;
+  // Build config from environment variables
+  const config: FirebaseOptions = {
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID!,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID!,
+  };
+
+  // Add optional fields if provided
+  if (process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL) {
+    config.databaseURL = process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL;
+  }
+
+  // Only include measurementId on web (Analytics doesn't work on React Native)
+  if (
+    Platform.OS === "web" &&
+    process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
+  ) {
+    config.measurementId = process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID;
+  }
+
+  if (__DEV__) {
+    console.log(
+      "[Firebase] Using EXPO_PUBLIC_* env config for project:",
+      config.projectId
+    );
+  }
+
+  return config;
 }
 
 /**
- * Check if Remote Config is supported
+ * Initialize Firebase Web SDK
+ * This is needed because Firebase Web SDK doesn't automatically detect
+ * Firebase initialized from native code (React Native Firebase)
  */
-export async function checkRemoteConfigSupport(): Promise<boolean> {
+function initializeFirebaseWebSDK(): FirebaseApp | null {
+  if (initializationAttempted) {
+    return app;
+  }
+
+  initializationAttempted = true;
+
   try {
-    return await isSupported();
+    // Check if Firebase is already initialized
+    const existingApps = getApps();
+    if (existingApps.length > 0) {
+      app = existingApps[0];
+      return app;
+    }
+
+    // Get Firebase config
+    const config = getFirebaseConfig();
+    if (!config) {
+      if (__DEV__) {
+        console.error(
+          "[Firebase] ❌ Firebase config not found. Please set EXPO_PUBLIC_FIREBASE_* environment variables."
+        );
+        console.error(
+          "[Firebase] Required variables: EXPO_PUBLIC_FIREBASE_API_KEY, EXPO_PUBLIC_FIREBASE_PROJECT_ID, EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN, EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET, EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, EXPO_PUBLIC_FIREBASE_APP_ID"
+        );
+        console.error(
+          "[Firebase] Get these values from Firebase Console → Project Settings → Your apps → Web app config"
+        );
+      }
+      return null;
+    }
+
+    // Initialize Firebase Web SDK
+    app = initializeApp(config);
+
+    if (__DEV__) {
+      console.log("[Firebase] ✅ Firebase Web SDK initialized successfully");
+    }
+
+    return app;
   } catch (error) {
-    console.error("[Firebase] Remote Config support check failed:", error);
-    return false;
+    if (__DEV__) {
+      console.error("[Firebase] Failed to initialize Firebase Web SDK:", error);
+    }
+    return null;
   }
 }
 
-export const login = async (email: string, password: string) => {
+/**
+ * Get Firebase app instance
+ * Automatically initializes Firebase Web SDK if not already initialized
+ */
+export function getFirebaseApp(): FirebaseApp | null {
+  if (app) {
+    return app;
+  }
+
+  // Try to get existing app first
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    app = existingApps[0];
+    return app;
+  }
+
+  // Initialize Firebase Web SDK
+  return initializeFirebaseWebSDK();
+}
+
+/**
+ * Get Firebase Auth instance
+ * Returns null if Firebase is not initialized yet (graceful handling)
+ * Uses AsyncStorage for persistence on React Native
+ */
+export function getAuthInstance(): Auth | null {
+  if (authInstance) {
+    return authInstance;
+  }
+
+  const firebaseApp = getFirebaseApp();
+  if (!firebaseApp) {
+    return null;
+  }
+
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
+    // On React Native, use initializeAuth with AsyncStorage for persistence
+    if (Platform.OS !== "web") {
+      try {
+        // Try to initialize with AsyncStorage persistence
+        authInstance = initializeAuth(firebaseApp, {
+          persistence: getReactNativePersistence(AsyncStorage),
+        });
+        if (__DEV__) {
+          console.log(
+            "[Firebase] Auth initialized with React Native persistence (AsyncStorage)"
+          );
+        }
+      } catch (initError) {
+        // If already initialized (e.g., getAuth was called elsewhere), just get it
+        if (
+          initError instanceof Error &&
+          (initError.message.includes("already been initialized") ||
+            initError.message.includes("already exists"))
+        ) {
+          authInstance = getAuth(firebaseApp);
+          if (__DEV__) {
+            console.log(
+              "[Firebase] Auth already initialized, using existing instance"
+            );
+          }
+        } else {
+          throw initError;
+        }
+      }
+    } else {
+      // On web, use regular getAuth
+      authInstance = getAuth(firebaseApp);
+      if (__DEV__) {
+        console.log("[Firebase] Auth initialized for web");
+      }
+    }
+    return authInstance;
   } catch (error) {
-    console.error(error);
+    // If auth is already initialized, just get it
+    if (
+      error instanceof Error &&
+      (error.message.includes("already been initialized") ||
+        error.message.includes("already exists"))
+    ) {
+      try {
+        authInstance = getAuth(firebaseApp);
+        if (__DEV__) {
+          console.log("[Firebase] Auth getAuth after init error");
+        }
+        return authInstance;
+      } catch {
+        // If getAuth also fails, return null
+        return null;
+      }
+    }
+    if (__DEV__) {
+      console.error("[Firebase] Failed to initialize Auth:", error);
+    }
+    return null;
+  }
+}
+
+/**
+ * Export auth instance for direct use (lazy initialization)
+ */
+export const auth = (() => {
+  try {
+    return getAuthInstance();
+  } catch {
+    // Return a mock auth object if Firebase not initialized
+    return {} as Auth;
+  }
+})();
+
+/**
+ * Logout user
+ */
+export async function logout(): Promise<void> {
+  try {
+    const authInstance = getAuthInstance();
+    if (!authInstance) {
+      if (__DEV__) {
+        console.warn("[Firebase] Logout called but Auth is not initialized");
+      }
+      return;
+    }
+    await signOut(authInstance);
+  } catch (error) {
+    console.error("Logout error:", error);
     throw error;
   }
-};
+}
 
-export const signUp = async (email: string, password: string) => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-  } catch (error) {
-    console.error(error);
-    throw error;
+/**
+ * Login with email and password
+ */
+export async function login(email: string, password: string): Promise<User> {
+  const authInstance = getAuthInstance();
+  if (!authInstance) {
+    throw new Error("[Firebase] Auth is not initialized");
   }
-};
+  const credential = await signInWithEmailAndPassword(
+    authInstance,
+    email,
+    password
+  );
+  return credential.user;
+}
 
-export const logout = async () => {
-  await signOut(auth);
-};
+/**
+ * Sign up with email and password
+ */
+export async function signUp(email: string, password: string): Promise<User> {
+  const authInstance = getAuthInstance();
+  if (!authInstance) {
+    throw new Error("[Firebase] Auth is not initialized");
+  }
+  const credential = await createUserWithEmailAndPassword(
+    authInstance,
+    email,
+    password
+  );
+  return credential.user;
+}
 
-export const getToken = async () => {
-  const token = await auth.currentUser?.getIdToken();
-  return token;
-};
+/**
+ * Sign in to Firebase using a Google ID token (from expo-auth-session)
+ */
+export async function signInWithGoogleIdToken(idToken: string): Promise<User> {
+  const authInstance = getAuthInstance();
+  if (!authInstance) {
+    throw new Error("[Firebase] Auth is not initialized");
+  }
+  const credential = GoogleAuthProvider.credential(idToken);
+  const result = await signInWithCredential(authInstance, credential);
+  return result.user;
+}

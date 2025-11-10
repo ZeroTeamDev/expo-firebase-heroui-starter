@@ -124,6 +124,27 @@ expo-firebase-heroui-starter/
 - `npm run ios` - Run on iOS simulator/device
 - `npm run web` - Run in web browser
 - `npm run lint` - Run ESLint
+- `npm run cli` - Run CLI code generators (see [Developer Tools Guide](./docs/developer-tools-guide.md))
+
+## 📚 Documentation
+
+### For Developers
+
+- **[Developer Tools Guide](./docs/developer-tools-guide.md)** - Complete guide for CLI tools, dev tools, templates, and example apps
+- **[UI Components](./docs/ui-components.md)** - Comprehensive UI components documentation
+- **[Database Integration](./docs/database-integration.md)** - Firestore database integration guide
+- **[AI Integration](./docs/ai-integration.md)** - AI features integration guide
+- **[Analytics Integration](./docs/analytics-integration.md)** - Analytics tracking guide
+
+### For AI Assistants
+
+- **[AI Assistant Quick Reference](./docs/ai-assistant-quick-reference.md)** - Quick reference for AI assistants working with this project
+- **[Developer Tools Guide](./docs/developer-tools-guide.md)** - Detailed guide with AI assistant workflows and best practices
+
+### Getting Started
+
+- **[Quick Start Guide](./docs/quick-start.md)** - Quick start guide for new developers
+- **[Getting Started](./docs/GETTING_STARTED.md)** - Detailed getting started guide
 
 ## 🔐 Authentication Flow
 

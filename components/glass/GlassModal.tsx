@@ -2,147 +2,103 @@
  * GlassModal Component
  * Created by Kien AI (leejungkiin@gmail.com)
  *
- * Modal overlay component with glass backdrop effect.
- * Implements backdrop blur with glass panel content container.
+ * Full-screen modal overlay with glass backdrop effect
  */
 
-import { useTheme } from "heroui-native";
-import { Modal, Pressable, View, type ModalProps, type ViewStyle, StyleSheet, Animated } from "react-native";
-import { BlurView } from "expo-blur";
-import { GlassPanel, type GlassPanelProps } from "./GlassPanel";
-import { useEffect, useRef, memo } from "react";
+import React from 'react';
+import {
+  View,
+  ViewProps,
+  StyleSheet,
+  Modal,
+  TouchableWithoutFeedback,
+  Pressable,
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useTheme } from 'heroui-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export interface GlassModalProps extends ModalProps {
-  /**
-   * Whether modal is visible
-   */
-  visible: boolean;
-  /**
-   * Callback when modal should close
-   */
-  onClose?: () => void;
-  /**
-   * Glass panel props for content container
-   */
-  glassProps?: GlassPanelProps;
-  /**
-   * Modal content
-   */
+export interface GlassModalProps extends ViewProps {
   children?: React.ReactNode;
-  /**
-   * Backdrop blur intensity
-   * @default 30
-   */
-  backdropBlurIntensity?: number;
-  /**
-   * Backdrop opacity (0-1)
-   * @default 0.6
-   */
+  visible: boolean;
+  onClose?: () => void;
+  blurIntensity?: number;
   backdropOpacity?: number;
+  dismissOnBackdropPress?: boolean;
+  animationType?: 'none' | 'slide' | 'fade';
 }
 
-function GlassModalComponent({
+export function GlassModal({
+  children,
   visible,
   onClose,
-  glassProps,
-  backdropBlurIntensity = 30,
-  backdropOpacity = 0.6,
-  children,
-  ...modalProps
+  blurIntensity = 30,
+  backdropOpacity = 0.5,
+  dismissOnBackdropPress = true,
+  animationType = 'fade',
+  style,
+  ...rest
 }: GlassModalProps) {
   const { colors, theme } = useTheme();
-  const isDark = theme === "dark";
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    if (visible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+  const handleBackdropPress = () => {
+    if (dismissOnBackdropPress && onClose) {
+      onClose();
     }
-  }, [visible, fadeAnim]);
-
-  const blurTint: "light" | "dark" | "default" = isDark ? "dark" : "light";
-  const backdropColor = isDark
-    ? `rgba(0, 0, 0, ${backdropOpacity})`
-    : `rgba(0, 0, 0, ${backdropOpacity * 0.5})`;
-
-  const backdropStyle: ViewStyle = {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  };
-
-  const contentContainerStyle: ViewStyle = {
-    margin: 20,
-    maxWidth: "90%",
-    maxHeight: "90%",
   };
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType={animationType}
       onRequestClose={onClose}
       statusBarTranslucent
-      {...modalProps}
     >
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
-      >
-        {/* Backdrop blur */}
-        <BlurView
-          intensity={backdropBlurIntensity}
-          tint={blurTint}
-          style={StyleSheet.absoluteFill}
-        />
-        {/* Backdrop overlay */}
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: backdropColor,
-            },
-          ]}
-        />
-      </Animated.View>
+      <TouchableWithoutFeedback onPress={handleBackdropPress}>
+        <View style={StyleSheet.absoluteFill}>
+          {/* Backdrop with blur */}
+          <BlurView
+            intensity={blurIntensity}
+            tint={isDark ? 'dark' : 'light'}
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: isDark
+                  ? `rgba(0, 0, 0, ${backdropOpacity})`
+                  : `rgba(255, 255, 255, ${backdropOpacity * 0.3})`,
+              },
+            ]}
+          />
 
-      {/* Backdrop pressable */}
-      <Pressable
-        style={[StyleSheet.absoluteFill, backdropStyle]}
-        onPress={onClose}
-      >
-        {/* Content container - stops propagation */}
-        <Pressable
-          style={contentContainerStyle}
-          onPress={(e) => e.stopPropagation()}
-        >
-          <GlassPanel
-            blurIntensity={glassProps?.blurIntensity || 20}
-            borderRadius={glassProps?.borderRadius || 20}
-            {...glassProps}
+          {/* Content */}
+          <Pressable
+            style={[
+              styles.content,
+              {
+                paddingTop: insets.top,
+                paddingBottom: insets.bottom,
+              },
+              style,
+            ]}
+            onPress={(e) => e.stopPropagation()}
+            {...rest}
           >
             {children}
-          </GlassPanel>
-        </Pressable>
-      </Pressable>
+          </Pressable>
+        </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
 
-export const GlassModal = memo(GlassModalComponent);
-
+const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+  },
+});

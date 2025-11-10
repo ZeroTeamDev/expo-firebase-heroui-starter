@@ -1,9 +1,30 @@
-import { Stack } from "expo-router";
+import { Stack, Redirect } from "expo-router";
 import { useTheme } from "heroui-native";
 import { Platform } from "react-native";
+import { useEffect } from "react";
+import { useAuth } from "@/providers/AuthProvider";
+import { router } from "expo-router";
 
 export default function AuthLayout() {
   const { colors, theme } = useTheme();
+  const { user, loading } = useAuth();
+
+  // Redirect to home if user is already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/(tabs)");
+    }
+  }, [user, loading]);
+
+  // Show loading state while checking auth
+  if (loading) {
+    return null;
+  }
+
+  // Redirect to home if user is logged in
+  if (user) {
+    return <Redirect href="/(tabs)" />;
+  }
   return (
     <Stack
       screenOptions={{

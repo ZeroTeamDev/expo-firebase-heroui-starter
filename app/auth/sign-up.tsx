@@ -2,6 +2,7 @@ import { ThemeView } from "@/components/theme-view";
 import useAlert from "@/hooks/use-alert";
 import { signUp } from "@/integrations/firebase.client";
 import { useAuthStore } from "@/stores/authStore";
+import { createUser } from "@/services/users/user.service";
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, router } from "expo-router";
@@ -53,7 +54,21 @@ export default function SignUp() {
     setIsLoading(true);
 
     try {
+      // Create Firebase Auth user
       const user = await signUp(data.email, data.password);
+
+      // Create user profile in Firestore
+      try {
+        await createUser(user.uid, {
+          email: data.email,
+          displayName: user.displayName || data.email.split('@')[0],
+        });
+      } catch (profileError) {
+        // Log error but don't fail signup - profile can be created later
+        if (__DEV__) {
+          console.warn('[SignUp] Failed to create user profile:', profileError);
+        }
+      }
 
       setUser(user);
 

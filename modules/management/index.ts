@@ -1,11 +1,10 @@
-/**
- * Management Module
- * Created by Kien AI (leejungkiin@gmail.com)
- *
- * Placeholder module definition - to be implemented later
- */
+// Created by Kien AI (leejungkiin@gmail.com)
+import type { ModuleDefinition } from '../types';
 
-export const managementModule = {
-  // Module definition will be added in later steps
+const managementModule: ModuleDefinition = {
+  id: 'management',
+  title: 'Management',
+  routes: [{ path: '/modules/management', title: 'Management Home' }],
 };
 
+export default managementModule;

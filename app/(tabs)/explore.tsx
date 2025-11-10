@@ -1,81 +1,173 @@
 import { ThemeView } from "@/components/theme-view";
-import { Button, useTheme } from "heroui-native";
-import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
-
-import { useAuthStore } from "@/stores/authStore";
+import { useTheme } from "heroui-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useModules } from "@/hooks/use-modules";
+import { GlassCard } from "@/components/glass/GlassCard";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { getDefaultModuleIcon } from "@/modules/icon-map";
+import { AIChip, AIStreaming } from "@/components/ai";
+import { DataCard } from "@/components/data";
+import { useTabBarPadding } from "@/hooks/use-tab-bar-padding";
 
 export default function MyComponent() {
-  const { toggleTheme, colors } = useTheme();
-  const { user } = useAuthStore();
-
-  const openLink = (url: string) => {
-    Linking.openURL(url);
-  };
-
-  const credits = [
-    {
-      name: "Firebase",
-      description: "Backend services and authentication",
-      url: "https://firebase.google.com/",
-    },
-    {
-      name: "HeroUI Native",
-      description: "Beautiful React Native UI components",
-      url: "https://github.com/heroui-inc/heroui-native",
-    },
-    {
-      name: "Expo",
-      description: "React Native development platform",
-      url: "https://expo.dev/",
-    },
-    {
-      name: "NativeWind",
-      description: "Tailwind CSS for React Native",
-      url: "https://www.nativewind.dev/",
-    },
-  ];
+  const { colors } = useTheme();
+  const router = useRouter();
+  const modules = useModules();
+  const bottomPadding = useTabBarPadding();
 
   return (
     <ThemeView className="flex-1 w-full">
-      <ScrollView className="flex-1 p-4">
-        <Text style={{ color: colors.foreground }} className="text-3xl font-bold mb-8">
-          Let's Explore, {user?.displayName || "User"}
-        </Text>
-
-        <View className="flex-1 mb-8">
-          <Text style={{ color: colors.foreground }} className="text-xl font-semibold mb-4">
-            Built with ❤️ using:
+      <ScrollView 
+        className="flex-1 p-4"
+        contentContainerStyle={{ paddingBottom: bottomPadding }}
+      >
+        <View className="mb-4">
+          <Text
+            style={{ color: colors.foreground }}
+            className="text-3xl font-bold"
+          >
+            Explore
           </Text>
+          <Text style={{ color: colors.mutedForeground }} className="mt-1">
+            Quick access to enabled modules
+          </Text>
+        </View>
 
-          {credits.map((credit, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => openLink(credit.url)}
-              className="mb-4 p-4 rounded-lg border"
-              style={{
-                borderColor: colors.border,
-                backgroundColor: colors.surface1,
-              }}
+        <View className="mb-2">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text
+              style={{ color: colors.foreground }}
+              className="text-xl font-semibold"
             >
-              <Text style={{ color: colors.foreground }} className="text-lg font-semibold">
-                {credit.name}
-              </Text>
-              <Text style={{ color: colors.mutedForeground }} className="text-sm mt-1">
-                {credit.description}
-              </Text>
-              <Text style={{ color: colors.accent }} className="text-xs mt-2">
-                Tap to visit →
-              </Text>
+              Modules
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/modules" as any)}>
+              <Text style={{ color: colors.accent }}>See all →</Text>
             </TouchableOpacity>
-          ))}
+          </View>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+            {modules.map((m) => {
+              const iconName =
+                (m.icon as any) || (getDefaultModuleIcon(m.id as any) as any);
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  onPress={() => router.push(`/modules/${m.id}` as any)}
+                  activeOpacity={0.9}
+                >
+                  <GlassCard
+                    style={{
+                      width: 160,
+                      height: 120,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <View style={{ gap: 10, alignItems: "flex-start" }}>
+                      <IconSymbol
+                        name={iconName}
+                        color={colors.accent}
+                        size={28}
+                      />
+                      <Text
+                        style={{ color: colors.foreground, fontWeight: "600" }}
+                      >
+                        {m.title}
+                      </Text>
+                      <Text
+                        style={{ color: colors.mutedForeground, fontSize: 12 }}
+                        numberOfLines={1}
+                      >
+                        {m.routes?.[0]?.title || "Open"}
+                      </Text>
+                    </View>
+                  </GlassCard>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* UI Previews */}
+        <View className="mt-6">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text
+              style={{ color: colors.foreground }}
+              className="text-xl font-semibold"
+            >
+              Previews
+            </Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push("/modules/examples/ui-components-example" as any)
+                }
+              >
+                <Text style={{ color: colors.accent }}>UI Components →</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push("/modules/examples/ai-example" as any)
+                }
+              >
+                <Text style={{ color: colors.accent }}>AI Examples →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+            {/* AIChip Preview */}
+            <GlassCard style={{ width: 160, padding: 12, gap: 10 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                AIChip
+              </Text>
+              <AIChip size="sm" label="Hold to talk" />
+            </GlassCard>
+
+            {/* AIStreaming Preview */}
+            <GlassCard style={{ width: 160, padding: 12, gap: 10 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                AIStreaming
+              </Text>
+              <AIStreaming
+                text={
+                  "Hello! This is a preview of the assistant response with markdown support."
+                }
+                isStreaming={false}
+                title="Preview"
+              />
+            </GlassCard>
+
+            {/* UI Data Preview */}
+            <GlassCard style={{ width: 160, padding: 12, gap: 10 }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                Data Card
+              </Text>
+              <View style={{ gap: 8 }}>
+                <DataCard
+                  title="Experiment backlog"
+                  subtitle="Growth team"
+                  description="12 active experiments • 6 owners"
+                  condensed
+                  badges={[
+                    {
+                      label: "Live",
+                      color: "rgba(99,102,241,0.14)",
+                      textColor: "#4338ca",
+                    },
+                  ]}
+                  metadata={[{ label: "Updated", value: "2h ago" }]}
+                  style={{
+                    borderWidth: 0,
+                    backgroundColor: "rgba(148,163,184,0.12)",
+                  }}
+                />
+              </View>
+            </GlassCard>
+          </View>
         </View>
       </ScrollView>
-
-      <View className="p-4">
-        <Button variant="primary" onPress={() => toggleTheme()} className="w-full">
-          Toggle Theme
-        </Button>
-      </View>
     </ThemeView>
   );
 }

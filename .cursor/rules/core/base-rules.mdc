@@ -118,6 +118,14 @@ A task is considered "large" when:
 - End each task with a brief description of work done
 - Follow commit conventions (feat, fix, docs, style, refactor...)
 
+## Documentation-First Development
+
+- **REQUIRED**: Read relevant documentation before writing or editing code
+- **REQUIRED**: Confirm requirements, architecture, and patterns in `docs/` prior to implementation
+- **REQUIRED**: Update or create documentation when adding new modules, services, or flows
+- **REQUIRED**: Reference core docs: `docs/STARTER_GUIDE.md`, `docs/architecture.md`, `docs/modules.md`, `docs/ui-components.md`
+- **PROHIBITED**: Making significant changes without consulting and aligning with documentation
+
 ## Safety Measures
 
 - Don't optimize code without being asked

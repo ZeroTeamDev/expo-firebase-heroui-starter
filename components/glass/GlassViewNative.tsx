@@ -15,16 +15,16 @@ import { BlurView } from "expo-blur";
 
 // Conditional import - expo-liquid-glass-view only works on iOS
 let ExpoLiquidGlassView: any = null;
-let CornerStyle: any = null;
-let LiquidGlassType: any = null;
 
 if (Platform.OS === "ios") {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const liquidGlassModule = require("expo-liquid-glass-view");
     ExpoLiquidGlassView = liquidGlassModule.ExpoLiquidGlassView;
-    CornerStyle = liquidGlassModule.CornerStyle;
-    LiquidGlassType = liquidGlassModule.LiquidGlassType;
-  } catch (error) {
+    // CornerStyle and LiquidGlassType are available but not used in current implementation
+    // CornerStyle = liquidGlassModule.CornerStyle;
+    // LiquidGlassType = liquidGlassModule.LiquidGlassType;
+  } catch {
     // Fallback if expo-liquid-glass-view is not available
     console.warn("expo-liquid-glass-view not available, using fallback");
   }
@@ -50,7 +50,7 @@ function GlassViewNativeComponent({
   children,
   ...otherProps
 }: GlassViewNativeProps) {
-  const { colors, theme } = useTheme();
+  const { theme } = useTheme();
   const isDark = theme === "dark";
 
   // Use expo-liquid-glass-view on iOS if available

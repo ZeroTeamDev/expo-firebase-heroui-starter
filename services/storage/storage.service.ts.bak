@@ -1,0 +1,1955 @@
+/**
+ * Storage Service
+ * Created by Kien AI (leejungkiin@gmail.com)
+ *
+ * Service for Firebase Storage operations
+ */
+
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  type StorageReference,
+} from "firebase/storage";
+import {
+  getFirebaseApp,
+  getAuthInstance,
+} from "@/integrations/firebase.client";
+import { Platform } from "react-native";
+
+// React Native Firebase Storage - only import on React Native
+let rnfbStorage: any = null;
+let rnfbStorageInitialized = false;
+
+/**
+ * Get React Native Firebase Storage instance
+ * Lazy initialization to avoid top-level await
+ */
+async function getReactNativeFirebaseStorage() {
+  if (rnfbStorageInitialized) {
+    return rnfbStorage;
+  }
+
+  if (Platform.OS === "web") {
+    return null;
+  }
+
+  rnfbStorageInitialized = true;
+
+  try {
+    // Dynamic import to avoid require() style import warning
+    const rnfbStorageModule = await import("@react-native-firebase/storage");
+    rnfbStorage = rnfbStorageModule.default;
+    return rnfbStorage;
+  } catch (error) {
+    // React Native Firebase Storage not available
+    if (__DEV__) {
+      console.warn(
+        "[Storage] @react-native-firebase/storage not available:",
+        error
+      );
+    }
+    return null;
+  }
+}
+
+let storageInstance: ReturnType<typeof getStorage> | null = null;
+
+/**
+ * Get Firebase Storage instance
+ */
+function getStorageInstance() {
+  // Only needed for web platform
+  // React Native uses React Native Firebase Storage
+  if (Platform.OS !== "web") {
+    return null;
+  }
+
+  if (storageInstance) {
+    return storageInstance;
+  }
+
+  const app = getFirebaseApp();
+  if (!app) {
+    throw new Error("Firebase app is not initialized (web platform)");
+  }
+
+  try {
+    storageInstance = getStorage(app);
+    if (__DEV__) {
+      console.log("[Storage] Firebase Storage instance initialized (web)");
+    }
+    return storageInstance;
+  } catch (error) {
+    console.error("[Storage] Failed to initialize Storage:", error);
+    throw new Error(
+      `Failed to initialize Firebase Storage: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
+}
+
+export interface UploadFileOptions {
+  metadata?: {
+    contentType?: string;
+    customMetadata?: Record<string, string>;
+  };
+  onProgress?: (progress: number) => void;
+}
+
+export interface UploadResult {
+  storagePath: string;
+  downloadURL: string;
+  metadata: {
+    size: number;
+    contentType: string;
+    fullPath: string;
+  };
+}
+
+/**
+ * Upload file to Firebase Storage
+ */
+export async function uploadFile(
+  file:
+    | File
+    | Blob
+    | { uri: string; name: string; type?: string; size?: number },
+  storagePath: string,
+  options?: UploadFileOptions
+): Promise<UploadResult> {
+  // For web platform, get Firebase Storage instance
+  // For React Native, use React Native Firebase Storage
+  const storage = getStorageInstance();
+  
+  // Only create storageRef for web platform
+  let storageRef: StorageReference | null = null;
+  if (Platform.OS === "web") {
+    if (!storage) {
+      throw new Error("Firebase Storage is not initialized (web platform)");
+    }
+    storageRef = ref(storage, storagePath);
+  }
+
+  // fileData can be Blob/File (Web), or React Native file object with uri (React Native)
+  let fileData:
+    | Blob
+    | File
+    | { uri: string; name: string; type?: string; size?: number };
+  let fileName: string;
+  let fileSize: number;
+  let fileType: string;
+
+  // Handle different file types
+  if (file instanceof File) {
+    fileData = file;
+    fileName = file.name;
+    fileSize = file.size;
+    fileType = file.type;
+  } else if (file instanceof Blob) {
+    fileData = file;
+    fileName = "file";
+    fileSize = file.size;
+    fileType = file.type || "application/octet-stream";
+  } else {
+    // React Native file object with uri
+    fileName = file.name;
+    fileSize = file.size || 0;
+    fileType = file.type || "application/octet-stream";
+
+    // For React Native: File object with URI will be used directly with React Native Firebase Storage
+    // No need to read file into memory - putFile handles it natively
+    // For Web: convert URI to Blob
+    if (Platform.OS === "web") {
+      // Web: use fetch API to get Blob
+      try {
+        if (__DEV__) {
+          console.log("[Storage] Reading file from URI (web):", file.uri);
+        }
+        const response = await fetch(file.uri);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch file: ${response.status} ${response.statusText}`
+          );
+        }
+        fileData = await response.blob();
+        fileSize = file.size || (fileData instanceof Blob ? fileData.size : 0);
+        fileType =
+          file.type ||
+          response.headers.get("content-type") ||
+          "application/octet-stream";
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[Storage] Failed to read file:", error);
+        throw new Error(
+          `Failed to read file: ${errorMessage}. Please ensure the file exists and is accessible.`
+        );
+      }
+    } else {
+      // React Native: Keep file object with URI - React Native Firebase Storage will handle file reading
+      fileData = file;
+
+      if (__DEV__) {
+        console.log("[Storage] React Native file object prepared for upload:", {
+          uri: file.uri,
+          name: fileName,
+          type: fileType,
+          size: fileSize,
+          note: "Will use React Native Firebase Storage putFile to upload directly from URI",
+        });
+      }
+    }
+  }
+
+  const metadata = {
+    contentType: fileType,
+    ...options?.metadata,
+  };
+
+  if (__DEV__) {
+    console.log("[Storage] Uploading file:", {
+      fileName,
+      fileSize,
+      fileType,
+      storagePath,
+      platform: Platform.OS,
+      method:
+        Platform.OS === "web" ? "Firebase Web SDK" : "React Native Firebase",
+    });
+  }
+
+  try {
+    let snapshot: any;
+    let downloadURL: string | undefined;
+
+    // Use React Native Firebase Storage for React Native (upload directly from file URI)
+    // Use Firebase Web SDK for Web (upload Blob/File)
+    const rnfbStorageInstance = await getReactNativeFirebaseStorage();
+    if (
+      Platform.OS !== "web" &&
+      rnfbStorageInstance &&
+      file &&
+      "uri" in file &&
+      typeof file.uri === "string"
+    ) {
+      // React Native: Use React Native Firebase Storage with putFile
+      // This is the recommended approach - uploads directly from file URI
+      if (__DEV__) {
+        console.log(
+          "[Storage] Using React Native Firebase Storage with putFile:",
+          {
+            fileUri: file.uri,
+            storagePath,
+            contentType: metadata.contentType,
+          }
+        );
+      }
+
+      try {
+        // Create reference to storage path
+        const rnfbStorageRef = rnfbStorageInstance().ref(storagePath);
+
+        // Upload file directly from URI using putFile
+        // putFile handles all the complexity of reading and uploading the file
+        // Create metadata object without duplicate contentType
+        const { contentType, ...restMetadata } = metadata;
+        const uploadMetadata = {
+          contentType: contentType || fileType,
+          ...restMetadata,
+        };
+
+        const uploadTask = rnfbStorageRef.putFile(file.uri, uploadMetadata);
+
+        // Handle progress if callback provided
+        if (options?.onProgress) {
+          uploadTask.on("state_changed", (taskSnapshot: any) => {
+            const progress =
+              (taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100;
+            options.onProgress?.(progress);
+          });
+        }
+
+        // Wait for upload to complete
+        await uploadTask;
+
+        // Get download URL
+        const rnfbDownloadURL = await rnfbStorageRef.getDownloadURL();
+
+        if (__DEV__) {
+          console.log(
+            "[Storage] ✅ File uploaded successfully using React Native Firebase:",
+            {
+              storagePath,
+              downloadURL: rnfbDownloadURL,
+              fileSize,
+            }
+          );
+        }
+
+        // Return result - rnfbDownloadURL is guaranteed to be string
+        return {
+          storagePath,
+          downloadURL: rnfbDownloadURL,
+          metadata: {
+            size: fileSize,
+            contentType: fileType,
+            fullPath: storagePath,
+          },
+        };
+      } catch (rnfbError) {
+        const errorMessage =
+          rnfbError instanceof Error ? rnfbError.message : "Unknown error";
+        if (__DEV__) {
+          console.error(
+            "[Storage] React Native Firebase Storage upload failed:",
+            rnfbError
+          );
+        }
+        throw new Error(
+          `Failed to upload file using React Native Firebase: ${errorMessage}`
+        );
+      }
+    } else if (Platform.OS === "web") {
+      // Web: use Firebase Web SDK with Blob/File
+      if (!fileData || typeof fileData !== "object") {
+        throw new Error("Web platform requires Blob or File object for upload");
+      }
+
+      // Type guard for Blob/File
+      const isBlobOrFile = (obj: any): obj is Blob | File => {
+        return obj instanceof Blob || obj instanceof File;
+      };
+
+      if (!isBlobOrFile(fileData)) {
+        throw new Error("Web platform requires Blob or File object for upload");
+      }
+
+      const binaryData: Blob | File = fileData;
+
+      if (__DEV__) {
+        const dataType = binaryData instanceof File ? "File" : "Blob";
+        const size = binaryData.size;
+        console.log("[Storage] Using Firebase Web SDK uploadBytes:", {
+          dataType,
+          platform: Platform.OS,
+          size,
+        });
+      }
+
+      if (!storageRef) {
+        throw new Error("Storage reference is not available (web platform)");
+      }
+
+      const uploadTask = uploadBytes(storageRef, binaryData, metadata);
+
+      // Handle progress if callback provided
+      if (options?.onProgress) {
+        // Note: uploadBytes doesn't support progress tracking directly
+        // For progress tracking, we would need to use uploadBytesResumable
+        // For now, we'll just call the callback with 100% after upload
+        uploadTask.then(() => {
+          options.onProgress?.(100);
+        });
+      }
+
+      snapshot = await uploadTask;
+    } else {
+      // Fallback: React Native without React Native Firebase
+      // This should not happen if @react-native-firebase/storage is installed
+      throw new Error(
+        "React Native Firebase Storage is not available. Please install @react-native-firebase/storage and rebuild the app."
+      );
+    }
+
+    // Get download URL for Web platform
+    // React Native Firebase already returned and exited above, so this is only for Web
+    if (Platform.OS === "web" && snapshot && storageRef) {
+      if (__DEV__) {
+        console.log(
+          "[Storage] File uploaded successfully:",
+          snapshot.ref?.fullPath || storagePath
+        );
+      }
+
+      try {
+        // Ensure we have a valid StorageReference
+        // For Web SDK uploads, snapshot.ref should be valid
+        let fileRef: StorageReference = snapshot.ref;
+
+        // If ref is not valid or missing, recreate it from the storage path
+        if (!fileRef || !fileRef.fullPath) {
+          if (!storage) {
+            throw new Error("Storage instance is not available (web platform)");
+          }
+          fileRef = ref(storage, storagePath);
+        }
+
+        // Use SDK's getDownloadURL - this is the most reliable method
+        // It handles token generation, URL encoding, and ensures the URL returns file content
+        // IMPORTANT: getDownloadURL generates a URL that returns the actual file content,
+        // not JSON metadata. This is the correct way to get download URLs.
+        downloadURL = await getDownloadURL(fileRef);
+
+        if (__DEV__) {
+          console.log("[Storage] ✅ Got download URL from SDK:", {
+            downloadURL,
+            path: fileRef.fullPath,
+            note: "SDK-generated URLs are guaranteed to return file content, not JSON metadata",
+          });
+
+          // Verify URL format
+          if (downloadURL && !downloadURL.includes("alt=media")) {
+            console.warn(
+              "[Storage] ⚠️ Download URL doesn't contain 'alt=media' - this may cause issues"
+            );
+          }
+        }
+      } catch (sdkError) {
+        // SDK failed - this should not happen in normal cases
+        // But if it does, we'll log the error and throw a helpful message
+        const errorMessage =
+          sdkError instanceof Error ? sdkError.message : "Unknown error";
+
+        console.error("[Storage] ❌ Failed to get download URL from SDK:", {
+          error: errorMessage,
+          path: snapshot?.ref?.fullPath || storagePath,
+          note: "This usually means the file upload failed or storage permissions are incorrect",
+        });
+
+        throw new Error(
+          `Failed to get download URL: ${errorMessage}. ` +
+            `The file may not have been uploaded correctly, or there may be a permissions issue. ` +
+            `Please check Firebase Storage rules and ensure the upload completed successfully.`
+        );
+      }
+
+      if (!downloadURL) {
+        throw new Error(
+          "Failed to get download URL. The file may not have been uploaded correctly."
+        );
+      }
+
+      if (__DEV__) {
+        console.log("[Storage] Download URL obtained:", downloadURL);
+      }
+
+      return {
+        storagePath,
+        downloadURL: downloadURL as string, // Type assertion: downloadURL is string here
+        metadata: {
+          size: fileSize,
+          contentType: fileType,
+          fullPath: snapshot?.ref?.fullPath || storagePath,
+        },
+      };
+    } else {
+      // This should not happen - React Native should have returned above
+      throw new Error(
+        "Upload completed but download URL was not obtained. This is an unexpected state."
+      );
+    }
+  } catch (error) {
+    console.error("[Storage] Upload failed:", error);
+    console.error("[Storage] Error details:", {
+      code: (error as any)?.code,
+      message: error instanceof Error ? error.message : "Unknown error",
+      serverResponse: (error as any)?.serverResponse,
+      storagePath,
+      fileName,
+      fileSize,
+      fileType,
+    });
+
+    // Provide more helpful error messages
+    if (error instanceof Error) {
+      // Check for specific Firebase Storage errors
+      if (error.message.includes("storage/unknown")) {
+        throw new Error(
+          `Firebase Storage error: An unknown error occurred. ` +
+            `Please check: 1) Firebase Storage is enabled in your Firebase Console, ` +
+            `2) Storage security rules allow uploads, ` +
+            `3) User is authenticated. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/unauthorized")) {
+        throw new Error(
+          `Firebase Storage error: User is not authorized to upload files. ` +
+            `Please check Storage security rules. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/quota-exceeded")) {
+        throw new Error(
+          `Firebase Storage error: Storage quota exceeded. ` +
+            `Please check your Firebase Storage quota. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/unauthenticated")) {
+        throw new Error(
+          `Firebase Storage error: User is not authenticated. ` +
+            `Please log in and try again. ` +
+            `Original error: ${error.message}`
+        );
+      }
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Get download URL for file
+ */
+export async function getFileUrl(storagePath: string): Promise<string> {
+  const storage = getStorageInstance();
+  if (!storage) {
+    throw new Error("Firebase Storage is not initialized (web platform)");
+  }
+  const storageRef = ref(storage, storagePath);
+  return await getDownloadURL(storageRef);
+}
+
+/**
+ * Delete file from Firebase Storage
+ */
+export async function deleteFileFromStorage(storagePath: string): Promise<void> {
+  const storage = getStorageInstance();
+  if (!storage) {
+    throw new Error("Firebase Storage is not initialized (web platform)");
+  }
+  const storageRef = ref(storage, storagePath);
+  await deleteObject(storageRef);
+}
+
+/**
+ * Validate file size
+ */
+export function validateFileSize(fileSize: number, maxSize: number): {
+  valid: boolean;
+  error?: string;
+} {
+  if (fileSize > maxSize) {
+    return {
+      valid: false,
+      error: `File size exceeds maximum allowed size of ${formatFileSize(maxSize)}`,
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validate file type
+ */
+export function validateFileType(
+  mimeType: string,
+  allowedTypes: string[]
+): {
+  valid: boolean;
+  error?: string;
+} {
+  if (allowedTypes.length === 0) {
+    // No restrictions
+    return { valid: true };
+  }
+
+  if (!allowedTypes.includes(mimeType)) {
+    return {
+      valid: false,
+      error: `File type ${mimeType} is not allowed. Allowed types: ${allowedTypes.join(', ')}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Format file size to human-readable string
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+    try {
+      const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketFormat}/o?name=${encodedPath}&uploadType=multipart`;
+
+      if (__DEV__) {
+        console.log(
+          `[Storage] Trying multipart upload with bucket format: ${bucketFormat}`
+        );
+      }
+
+      // Create multipart/related form data
+      const boundary =
+        "----firebasestorage" + Math.random().toString(36).substring(2, 15);
+      const metadataPart = JSON.stringify({
+        contentType: metadata.contentType || "application/octet-stream",
+      });
+
+      // Build multipart/related body according to Firebase Storage API spec
+      // Format: --boundary\r\nContent-Type: application/json\r\n\r\n{metadata}\r\n--boundary\r\nContent-Type: {fileType}\r\n\r\n{binary}\r\n--boundary--
+      const multipartHeader = [
+        `--${boundary}`,
+        "Content-Type: application/json",
+        "",
+        metadataPart,
+        "",
+        `--${boundary}`,
+        `Content-Type: ${metadata.contentType || "application/octet-stream"}`,
+        "",
+        "", // Binary data starts here
+      ].join("\r\n");
+
+      const multipartFooter = `\r\n--${boundary}--\r\n`;
+
+      // Convert to bytes
+      let headerBytes: Uint8Array;
+      let footerBytes: Uint8Array;
+
+      if (typeof TextEncoder !== "undefined") {
+        headerBytes = new TextEncoder().encode(multipartHeader + "\r\n");
+        footerBytes = new TextEncoder().encode(multipartFooter);
+      } else {
+        // Manual UTF-8 encoding
+        const encodeUTF8 = (str: string): Uint8Array => {
+          const utf8: number[] = [];
+          for (let i = 0; i < str.length; i++) {
+            const charCode = str.charCodeAt(i);
+            if (charCode < 0x80) {
+              utf8.push(charCode);
+            } else if (charCode < 0x800) {
+              utf8.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
+            } else {
+              utf8.push(
+                0xe0 | (charCode >> 12),
+                0x80 | ((charCode >> 6) & 0x3f),
+                0x80 | (charCode & 0x3f)
+              );
+            }
+          }
+          return new Uint8Array(utf8);
+        };
+        headerBytes = encodeUTF8(multipartHeader + "\r\n");
+        footerBytes = encodeUTF8(multipartFooter);
+      }
+
+      // Combine parts
+      const totalLength =
+        headerBytes.length + binaryData.byteLength + footerBytes.length;
+
+      if (__DEV__) {
+        console.log(`[Storage] Building multipart body:`, {
+          headerBytes: headerBytes.length,
+          binaryData: binaryData.byteLength,
+          footerBytes: footerBytes.length,
+          totalLength,
+          boundary,
+          note: "Binary data should be included in multipart body",
+        });
+      }
+
+      const multipartData = new Uint8Array(totalLength);
+      multipartData.set(headerBytes, 0);
+
+      // Convert ArrayBuffer to Uint8Array
+      const binaryBytes = new Uint8Array(binaryData);
+
+      multipartData.set(binaryBytes, headerBytes.length);
+      multipartData.set(footerBytes, headerBytes.length + binaryBytes.length);
+
+      if (__DEV__) {
+        console.log(`[Storage] Multipart body created:`, {
+          multipartDataLength: multipartData.length,
+          expectedLength: totalLength,
+          firstBytes: Array.from(multipartData.slice(0, 100))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join(" "),
+          lastBytes: Array.from(multipartData.slice(-50))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join(" "),
+        });
+      }
+
+      // Upload multipart body
+      // React Native fetch doesn't handle multipart ArrayBuffer correctly
+      // Use XMLHttpRequest for React Native, fetch for web
+      let response: Response;
+
+      if (Platform.OS === "web") {
+        // Web: use fetch with ArrayBuffer
+        const multipartArrayBuffer = multipartData.buffer.slice(
+          multipartData.byteOffset,
+          multipartData.byteOffset + multipartData.byteLength
+        );
+
+        if (__DEV__) {
+          console.log(`[Storage] Uploading multipart body (web):`, {
+            multipartArrayBufferSize: multipartArrayBuffer.byteLength,
+            multipartDataLength: multipartData.length,
+            contentType: `multipart/related; boundary=${boundary}`,
+          });
+        }
+
+        response = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": `multipart/related; boundary=${boundary}`,
+            "Content-Length": String(multipartArrayBuffer.byteLength),
+          },
+          body: multipartArrayBuffer,
+        });
+      } else {
+        // React Native: use XMLHttpRequest for multipart upload
+        if (__DEV__) {
+          console.log(`[Storage] Uploading multipart body (React Native):`, {
+            multipartDataLength: multipartData.length,
+            contentType: `multipart/related; boundary=${boundary}`,
+            note: "Using XMLHttpRequest for reliable binary data upload",
+          });
+        }
+
+        // Create a response-like object from XMLHttpRequest
+        const xhrResponse = await new Promise<{
+          ok: boolean;
+          status: number;
+          statusText: string;
+          text: () => Promise<string>;
+        }>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", uploadUrl, true);
+          xhr.setRequestHeader("Authorization", `Bearer ${idToken}`);
+          xhr.setRequestHeader(
+            "Content-Type",
+            `multipart/related; boundary=${boundary}`
+          );
+          xhr.setRequestHeader("Content-Length", String(multipartData.length));
+          xhr.responseType = "text";
+
+          xhr.onload = () => {
+            resolve({
+              ok: xhr.status >= 200 && xhr.status < 300,
+              status: xhr.status,
+              statusText: xhr.statusText,
+              text: async () => xhr.responseText || xhr.response || "",
+            });
+          };
+
+          xhr.onerror = () => {
+            reject(
+              new Error(
+                `Network request failed: ${xhr.status || "unknown"} ${
+                  xhr.statusText || "unknown error"
+                }`
+              )
+            );
+          };
+
+          xhr.ontimeout = () => {
+            reject(new Error("Upload timeout"));
+          };
+
+          xhr.timeout = 120000; // 120 seconds
+
+          // Send multipart data
+          xhr.send(multipartData);
+        });
+
+        // For React Native, we already have the response data from XMLHttpRequest
+        // Create a mock response object for consistency
+        const responseText = await xhrResponse.text();
+
+        if (!xhrResponse.ok) {
+          if (__DEV__) {
+            console.warn(
+              `[Storage] Multipart upload failed with bucket format "${bucketFormat}":`,
+              {
+                status: xhrResponse.status,
+                statusText: xhrResponse.statusText,
+                error: responseText.substring(0, 200),
+              }
+            );
+          }
+
+          // If 404, try next format
+          if (xhrResponse.status === 404) {
+            lastError = new Error(
+              `Bucket format "${bucketFormat}" not found (404)`
+            );
+            continue;
+          }
+
+          // For other errors, save and continue
+          lastError = new Error(
+            `Multipart upload failed with "${bucketFormat}": ${
+              xhrResponse.status
+            } ${xhrResponse.statusText}. ${responseText.substring(0, 200)}`
+          );
+          continue;
+        }
+
+        // Parse JSON response
+        let result: any;
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          // If response is not JSON, create error
+          lastError = new Error(
+            `Failed to parse multipart upload response: ${responseText.substring(
+              0,
+              200
+            )}`
+          );
+          continue;
+        }
+
+        // Verify upload was successful
+        const uploadedSize = result.size ? parseInt(result.size) : 0;
+        const expectedSize = binaryData.byteLength;
+
+        if (uploadedSize < expectedSize * 0.1) {
+          // Uploaded size is less than 10% of expected - likely only metadata
+          const errorMsg = `Multipart upload only uploaded metadata (${uploadedSize} bytes) instead of file data (${expectedSize} bytes). This usually means the binary data was not included in the multipart body correctly.`;
+          if (__DEV__) {
+            console.error(
+              "[Storage] Multipart upload failed - only metadata uploaded:",
+              {
+                uploadedSize,
+                expectedSize,
+                result,
+                error: errorMsg,
+              }
+            );
+          }
+          lastError = new Error(errorMsg);
+          continue;
+        }
+
+        if (onProgress) {
+          onProgress(100);
+        }
+
+        if (__DEV__) {
+          console.log(
+            `[Storage] ✅ Multipart upload successful with bucket format: ${bucketFormat}`,
+            {
+              name: result.name,
+              size: result.size,
+              uploadedSize,
+              expectedSize,
+              contentType: result.contentType,
+              downloadTokens: result.downloadTokens,
+            }
+          );
+        }
+
+        // Verify upload by getting download URL
+        try {
+          const downloadURL = await getDownloadURL(storageRef);
+          if (__DEV__) {
+            console.log(
+              "[Storage] ✅ Multipart upload verified with download URL:",
+              {
+                downloadURL: downloadURL.substring(0, 100) + "...",
+              }
+            );
+          }
+        } catch (urlError) {
+          if (__DEV__) {
+            console.warn(
+              "[Storage] Could not get download URL after multipart upload:",
+              urlError
+            );
+          }
+        }
+
+        // Multipart upload returns metadata with downloadTokens
+        const fileName =
+          result.name || storageRef.fullPath.split("/").pop() || "file";
+        const downloadTokens = result.downloadTokens;
+
+        // Return result with proper metadata structure
+        // Note: result.contentType might be "application/json" from metadata part
+        // Use the metadata.contentType we passed in instead (actual file content type)
+        return {
+          ref: storageRef,
+          metadata: {
+            contentType: metadata.contentType || "application/octet-stream", // Use actual file content type
+            size: uploadedSize, // Use actual uploaded size from response
+            fullPath: storageRef.fullPath,
+            name: fileName,
+            downloadTokens: downloadTokens,
+            ...result, // Include all other fields from response
+          },
+        };
+      }
+
+      // Web: handle fetch response
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (__DEV__) {
+          console.warn(
+            `[Storage] Multipart upload failed with bucket format "${bucketFormat}":`,
+            {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText.substring(0, 200),
+            }
+          );
+        }
+
+        // If 404, try next format
+        if (response.status === 404) {
+          lastError = new Error(
+            `Bucket format "${bucketFormat}" not found (404)`
+          );
+          continue;
+        }
+
+        // For other errors, save and continue
+        lastError = new Error(
+          `Multipart upload failed with "${bucketFormat}": ${response.status} ${
+            response.statusText
+          }. ${errorText.substring(0, 200)}`
+        );
+        continue;
+      }
+
+      const result = await response.json();
+
+      // CRITICAL: Verify that actual file data was uploaded, not just metadata
+      // If size is very small (e.g., 35 bytes), it means only metadata was uploaded
+      const uploadedSize = result.size ? parseInt(result.size) : 0;
+      const expectedSize = binaryData.byteLength;
+
+      if (uploadedSize < expectedSize * 0.1) {
+        // Uploaded size is less than 10% of expected - likely only metadata
+        const errorMsg = `Multipart upload only uploaded metadata (${uploadedSize} bytes) instead of file data (${expectedSize} bytes). This usually means the binary data was not included in the multipart body correctly.`;
+        if (__DEV__) {
+          console.error(
+            "[Storage] Multipart upload failed - only metadata uploaded:",
+            {
+              uploadedSize,
+              expectedSize,
+              result,
+              error: errorMsg,
+            }
+          );
+        }
+        throw new Error(errorMsg);
+      }
+
+      if (onProgress) {
+        onProgress(100);
+      }
+
+      if (__DEV__) {
+        console.log(
+          `[Storage] ✅ Multipart upload successful with bucket format: ${bucketFormat}`,
+          {
+            name: result.name,
+            size: result.size,
+            uploadedSize,
+            expectedSize,
+            contentType: result.contentType,
+            downloadTokens: result.downloadTokens,
+          }
+        );
+      }
+
+      // Verify upload by getting download URL
+      try {
+        const downloadURL = await getDownloadURL(storageRef);
+        if (__DEV__) {
+          console.log(
+            "[Storage] ✅ Multipart upload verified with download URL:",
+            {
+              downloadURL: downloadURL.substring(0, 100) + "...",
+            }
+          );
+        }
+      } catch (urlError) {
+        if (__DEV__) {
+          console.warn(
+            "[Storage] Could not get download URL after multipart upload:",
+            urlError
+          );
+        }
+      }
+
+      // Multipart upload returns metadata with downloadTokens
+      const fileName =
+        result.name || storageRef.fullPath.split("/").pop() || "file";
+      const downloadTokens = result.downloadTokens;
+
+      // Return result with proper metadata structure
+      // Note: result.contentType might be "application/json" from metadata part
+      // Use the metadata.contentType we passed in instead (actual file content type)
+      return {
+        ref: storageRef,
+        metadata: {
+          contentType: metadata.contentType || "application/octet-stream", // Use actual file content type
+          size: uploadedSize, // Use actual uploaded size from response
+          fullPath: storageRef.fullPath,
+          name: fileName,
+          downloadTokens: downloadTokens,
+          ...result, // Include all other fields from response
+        },
+      };
+    } catch (formatError) {
+      lastError =
+        formatError instanceof Error
+          ? formatError
+          : new Error(String(formatError));
+      if (__DEV__) {
+        console.warn(
+          `[Storage] Error with multipart bucket format "${bucketFormat}":`,
+          formatError
+        );
+      }
+      continue;
+    }
+  }
+
+  // All formats failed
+  if (__DEV__) {
+    console.error("[Storage] ❌ All upload methods and bucket formats failed");
+    console.error("[Storage] Last error:", lastError);
+    console.error("[Storage] Troubleshooting:");
+    console.error("  1. Verify bucket exists in Firebase Console");
+    console.error("  2. Check Firebase Storage is enabled");
+    console.error("  3. Verify EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET in .env");
+    console.error("  4. Check Storage security rules allow uploads");
+    console.error("  5. Verify user is authenticated");
+    console.error(
+      "  6. Check Firebase Storage API is enabled in Google Cloud Console"
+    );
+  }
+
+  throw (
+    lastError ||
+    new Error(
+      "All upload methods failed. Check Firebase Storage configuration."
+    )
+  );
+}
+
+/**
+ * Upload base64 string to Firebase Storage using REST API
+ * This is needed because uploadString doesn't work well in React Native
+ */
+async function uploadBase64ViaRESTAPI(
+  storageRef: StorageReference,
+  base64String: string,
+  metadata: { contentType?: string; [key: string]: any },
+  onProgress?: (progress: number) => void
+): Promise<any> {
+  const authInstance = getAuthInstance();
+  if (!authInstance?.currentUser) {
+    throw new Error("User must be authenticated to upload files");
+  }
+
+  // Get Firebase config (only for web platform)
+  // React Native uses React Native Firebase Storage (doesn't need this)
+  if (Platform.OS !== "web") {
+    throw new Error(
+      "REST API upload only supported on web platform. Use React Native Firebase Storage on mobile."
+    );
+  }
+
+  const firebaseApp = getFirebaseApp();
+  if (!firebaseApp) {
+    throw new Error("Firebase app not initialized (web platform)");
+  }
+
+  let storageBucket = firebaseApp.options.storageBucket;
+  if (!storageBucket) {
+    throw new Error("Storage bucket not configured");
+  }
+
+  // Check if bucket contains domain (has dots)
+  // If not, it's already just the bucket ID
+  const hasDomain = storageBucket.includes(".");
+
+  if (__DEV__) {
+    console.log("[Storage] Original storage bucket:", storageBucket);
+    console.log("[Storage] Has domain:", hasDomain);
+  }
+
+  // Get access token
+  const idToken = await authInstance.currentUser.getIdToken();
+
+  // Convert base64 to binary data FIRST (we need the size for upload initiation)
+  let binaryData: ArrayBuffer;
+  try {
+    binaryData = base64ToArrayBuffer(base64String);
+  } catch (error) {
+    throw new Error(
+      `Failed to convert base64 to binary: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
+
+  // Build REST API URL for resumable upload (more reliable than multipart)
+  // Firebase Storage REST API supports resumable uploads which are more reliable
+  // Step 1: Get upload URL
+  // Step 2: Upload data to that URL
+
+  const encodedPath = encodeURIComponent(storageRef.fullPath);
+
+  // Try different bucket name formats for Firebase Storage REST API
+  // IMPORTANT: Based on download URL evidence, Firebase Storage uses FULL bucket name with domain
+  // Download URL format: https://firebasestorage.googleapis.com/v0/b/superheroes-ee77d.firebasestorage.app/o/...
+  // Format 1: Full bucket name with domain (e.g., "superheroes-ee77d.firebasestorage.app") - PRIORITY
+  // Format 2: Bucket ID only (e.g., "superheroes-ee77d") - fallback
+  // Format 3: Project ID (if different from bucket ID) - fallback
+
+  const bucketId = hasDomain ? storageBucket.split(".")[0] : storageBucket;
+
+  // Prioritize FULL bucket name FIRST (matches download URL format)
+  const bucketFormats = [
+    storageBucket, // Try full bucket name FIRST (e.g., "superheroes-ee77d.firebasestorage.app")
+    bucketId, // Then try bucket ID only (fallback)
+  ];
+
+  // Also try with project ID if available and different
+  const projectId = firebaseApp.options.projectId;
+  if (
+    projectId &&
+    projectId !== bucketId &&
+    !bucketFormats.includes(projectId)
+  ) {
+    bucketFormats.push(projectId);
+  }
+
+  if (__DEV__) {
+    console.log(
+      "[Storage] Trying bucket formats (prioritizing full domain based on download URL):",
+      {
+        formats: bucketFormats,
+        original: storageBucket,
+        bucketId,
+        projectId,
+        note: "Full bucket name is tried first (matches download URL format)",
+      }
+    );
+  }
+
+  let lastError: Error | null = null;
+
+  // Try each bucket format until one works
+  for (const bucketFormat of bucketFormats) {
+    try {
+      const initiateUploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketFormat}/o?name=${encodedPath}&uploadType=resumable`;
+
+      if (__DEV__) {
+        console.log(
+          `[Storage] Trying resumable upload with bucket format: ${bucketFormat}`
+        );
+        console.log(`[Storage] Initiate URL: ${initiateUploadUrl}`);
+      }
+
+      // Step 1: Initialize resumable upload to get upload URL
+      let initResponse: Response;
+      try {
+        if (__DEV__) {
+          console.log(`[Storage] Initializing resumable upload:`, {
+            bucketFormat,
+            binaryDataSize: binaryData.byteLength,
+            contentType: metadata.contentType,
+          });
+        }
+
+        initResponse = await fetch(initiateUploadUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Goog-Upload-Protocol": "resumable",
+            "X-Goog-Upload-Command": "start",
+          },
+          body: JSON.stringify({
+            contentType: metadata.contentType || "application/octet-stream",
+          }),
+        });
+
+        if (__DEV__) {
+          console.log(`[Storage] Resumable init response:`, {
+            status: initResponse.status,
+            statusText: initResponse.statusText,
+            ok: initResponse.ok,
+            headers: Object.fromEntries(initResponse.headers.entries()),
+          });
+        }
+      } catch (fetchError) {
+        if (__DEV__) {
+          console.error(`[Storage] Resumable init fetch failed:`, fetchError);
+        }
+        lastError =
+          fetchError instanceof Error
+            ? fetchError
+            : new Error(String(fetchError));
+        continue;
+      }
+
+      if (!initResponse.ok) {
+        const errorText = await initResponse.text();
+
+        if (__DEV__) {
+          console.warn(`[Storage] Bucket format "${bucketFormat}" failed:`, {
+            status: initResponse.status,
+            statusText: initResponse.statusText,
+            error: errorText.substring(0, 500), // Increase error text length
+          });
+        }
+
+        // If 404, try next format
+        if (initResponse.status === 404) {
+          lastError = new Error(
+            `Bucket format "${bucketFormat}" not found (404)`
+          );
+          continue; // Try next format
+        }
+
+        // For other errors, save and continue trying
+        lastError = new Error(
+          `Failed with bucket format "${bucketFormat}": ${
+            initResponse.status
+          } ${initResponse.statusText}. ${errorText.substring(0, 500)}`
+        );
+        continue;
+      }
+
+      // Success! Get the upload URL
+      // Firebase Storage returns upload URL in either "Location" or "x-goog-upload-url" header
+      const uploadUrl =
+        initResponse.headers.get("Location") ||
+        initResponse.headers.get("x-goog-upload-url");
+
+      if (!uploadUrl) {
+        if (__DEV__) {
+          console.error(`[Storage] No upload URL found in headers:`, {
+            headers: Object.fromEntries(initResponse.headers.entries()),
+            availableHeaders: Array.from(initResponse.headers.keys()),
+          });
+        }
+        lastError = new Error(
+          `No upload URL returned for bucket format "${bucketFormat}" (checked Location and x-goog-upload-url headers)`
+        );
+        continue;
+      }
+
+      if (__DEV__) {
+        console.log(`[Storage] ✅ Success with bucket format: ${bucketFormat}`);
+        console.log(`[Storage] Got resumable upload URL: ${uploadUrl}`);
+        console.log(`[Storage] Upload URL source:`, {
+          fromLocation: !!initResponse.headers.get("Location"),
+          fromXGoogUploadUrl: !!initResponse.headers.get("x-goog-upload-url"),
+        });
+      }
+
+      // Step 2: Upload the binary data
+      try {
+        const binaryBytes = new Uint8Array(binaryData);
+
+        if (__DEV__) {
+          console.log("[Storage] Uploading binary data:", {
+            size: binaryBytes.length,
+            contentType: metadata.contentType || "application/octet-stream",
+            uploadUrl: uploadUrl.substring(0, 100) + "...",
+            platform: Platform.OS,
+            note:
+              Platform.OS === "web"
+                ? "Using fetch with Blob"
+                : "Using XMLHttpRequest with Uint8Array",
+          });
+        }
+
+        let result: any;
+
+        if (Platform.OS === "web") {
+          // Web: use fetch with Blob
+          const blob = new Blob([binaryBytes], {
+            type: metadata.contentType || "application/octet-stream",
+          });
+          const response = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type":
+                metadata.contentType || "application/octet-stream",
+              "Content-Length": String(binaryData.byteLength),
+            },
+            body: blob,
+          });
+
+          if (!response.ok) {
+            const errorText = await response
+              .text()
+              .catch(() => "Unknown error");
+            if (__DEV__) {
+              console.error("[Storage] Resumable upload failed:", {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorText.substring(0, 500),
+              });
+            }
+            throw new Error(
+              `Upload failed: ${response.status} ${response.statusText}. ${errorText}`
+            );
+          }
+
+          const responseText = await response.text();
+          if (responseText) {
+            try {
+              result = JSON.parse(responseText);
+            } catch {
+              // Empty or non-JSON response - will verify with getDownloadURL
+            }
+          }
+        } else {
+          // React Native: use XMLHttpRequest - fetch doesn't support ArrayBuffer properly
+          result = await new Promise<any>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", uploadUrl, true);
+            xhr.setRequestHeader(
+              "Content-Type",
+              metadata.contentType || "application/octet-stream"
+            );
+            xhr.setRequestHeader("Content-Length", String(binaryBytes.length));
+            xhr.responseType = "text";
+
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                const responseText = xhr.responseText || xhr.response || "";
+                try {
+                  if (responseText) {
+                    const parsedResult = JSON.parse(responseText);
+                    resolve(parsedResult);
+                  } else {
+                    // Empty response - success, will verify with getDownloadURL
+                    resolve({ success: true });
+                  }
+                } catch (parseError) {
+                  if (__DEV__) {
+                    console.warn(
+                      "[Storage] Failed to parse resumable upload response:",
+                      parseError,
+                      responseText.substring(0, 200)
+                    );
+                  }
+                  // Still resolve - empty response might mean success
+                  resolve({ success: true });
+                }
+              } else {
+                const errorText =
+                  xhr.responseText || xhr.response || "Unknown error";
+                if (__DEV__) {
+                  console.error("[Storage] Resumable upload failed:", {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    error: errorText.substring(0, 500),
+                  });
+                }
+                reject(
+                  new Error(
+                    `Upload failed: ${xhr.status} ${xhr.statusText}. ${errorText}`
+                  )
+                );
+              }
+            };
+
+            xhr.onerror = () => {
+              const errorMsg = `Network request failed: ${
+                xhr.status || "unknown"
+              } ${xhr.statusText || "unknown error"}`;
+              if (__DEV__) {
+                console.error("[Storage] XMLHttpRequest error:", {
+                  status: xhr.status,
+                  statusText: xhr.statusText,
+                  readyState: xhr.readyState,
+                });
+              }
+              reject(new Error(errorMsg));
+            };
+
+            xhr.ontimeout = () => {
+              reject(new Error("Upload timeout"));
+            };
+
+            xhr.timeout = 120000; // 120 seconds timeout for large files
+
+            // Send binary data - XMLHttpRequest in React Native supports Uint8Array
+            xhr.send(binaryBytes);
+          });
+        }
+
+        // Verify upload was successful - check if size matches
+        if (result?.size && parseInt(result.size) !== binaryData.byteLength) {
+          if (__DEV__) {
+            console.warn("[Storage] Uploaded file size mismatch:", {
+              expected: binaryData.byteLength,
+              actual: result.size,
+            });
+          }
+          // Continue anyway - might be compression or other processing
+        }
+
+        if (onProgress) {
+          onProgress(100);
+        }
+
+        // Verify upload by getting download URL
+        // This ensures the file was actually uploaded, not just metadata
+        try {
+          const downloadURL = await getDownloadURL(storageRef);
+          if (__DEV__) {
+            console.log(
+              "[Storage] ✅ Resumable upload verified with download URL:",
+              {
+                downloadURL: downloadURL.substring(0, 100) + "...",
+                expectedSize: binaryData.byteLength,
+                resultSize: result?.size,
+                note: "File uploaded successfully with binary data",
+              }
+            );
+          }
+        } catch (urlError) {
+          // If we can't get download URL, upload might have failed
+          if (__DEV__) {
+            console.error(
+              "[Storage] Failed to get download URL after upload:",
+              urlError
+            );
+          }
+          // Continue anyway - result might have the necessary info
+        }
+
+        // Return result with metadata
+        // If result is empty/undefined, we still have storageRef and can get URL later
+        const fileName =
+          result?.name || storageRef.fullPath.split("/").pop() || "file";
+        const downloadTokens = result?.downloadTokens;
+
+        return {
+          ref: storageRef,
+          metadata: {
+            contentType: metadata.contentType || "application/octet-stream",
+            size: result?.size ? parseInt(result.size) : binaryData.byteLength,
+            fullPath: storageRef.fullPath,
+            name: fileName,
+            downloadTokens: downloadTokens,
+            ...(result || {}),
+          },
+        };
+      } catch (uploadError) {
+        // Upload binary data failed - log and try next format
+        if (__DEV__) {
+          console.error(
+            `[Storage] Resumable upload binary data failed for "${bucketFormat}":`,
+            uploadError
+          );
+        }
+        lastError =
+          uploadError instanceof Error
+            ? uploadError
+            : new Error(String(uploadError));
+        continue; // Try next format
+      }
+    } catch (formatError) {
+      // Format error (init failed, no upload URL, etc.)
+      lastError =
+        formatError instanceof Error
+          ? formatError
+          : new Error(String(formatError));
+      if (__DEV__) {
+        console.warn(
+          `[Storage] Error with bucket format "${bucketFormat}":`,
+          formatError
+        );
+      }
+      continue; // Try next format
+    }
+  }
+
+  // All formats failed, try multipart as last resort
+  if (__DEV__) {
+    console.warn(
+      "[Storage] All resumable upload formats failed, trying multipart upload as fallback"
+    );
+    console.warn("[Storage] Last error:", lastError);
+  }
+
+  // Fallback to multipart upload with the original bucket ID
+  return await uploadBase64ViaMultipartAPI(
+    storageRef,
+    base64String,
+    metadata,
+    idToken,
+    bucketId,
+    encodedPath,
+    binaryData,
+    onProgress
+  );
+}
+
+/**
+ * Upload file to Firebase Storage
+ */
+export async function uploadFile(
+  file:
+    | File
+    | Blob
+    | { uri: string; name: string; type?: string; size?: number },
+  storagePath: string,
+  options?: UploadFileOptions
+): Promise<UploadResult> {
+  const storage = getStorageInstance();
+  const storageRef = ref(storage, storagePath);
+
+  // fileData can be Blob/File (Web), or React Native file object with uri (React Native)
+  let fileData:
+    | Blob
+    | File
+    | { uri: string; name: string; type?: string; size?: number };
+  let fileName: string;
+  let fileSize: number;
+  let fileType: string;
+
+  // Handle different file types
+  if (file instanceof File) {
+    fileData = file;
+    fileName = file.name;
+    fileSize = file.size;
+    fileType = file.type;
+  } else if (file instanceof Blob) {
+    fileData = file;
+    fileName = "file";
+    fileSize = file.size;
+    fileType = file.type || "application/octet-stream";
+  } else {
+    // React Native file object with uri
+    // For React Native, we need to read the file and convert to blob
+    fileName = file.name;
+    fileSize = file.size || 0;
+    fileType = file.type || "application/octet-stream";
+
+    // For React Native: File object with URI will be used directly with React Native Firebase Storage
+    // No need to read file into memory - putFile handles it natively
+    // For Web: convert URI to Blob
+    if (Platform.OS === "web") {
+      // Web: use fetch API to get Blob
+      try {
+        if (__DEV__) {
+          console.log("[Storage] Reading file from URI (web):", file.uri);
+        }
+        const response = await fetch(file.uri);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch file: ${response.status} ${response.statusText}`
+          );
+        }
+        fileData = await response.blob();
+        fileSize = file.size || (fileData instanceof Blob ? fileData.size : 0);
+        fileType =
+          file.type ||
+          response.headers.get("content-type") ||
+          "application/octet-stream";
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[Storage] Failed to read file:", error);
+        throw new Error(
+          `Failed to read file: ${errorMessage}. Please ensure the file exists and is accessible.`
+        );
+      }
+    } else {
+      // React Native: Keep file object with URI - React Native Firebase Storage will handle file reading
+      fileData = file;
+
+      if (__DEV__) {
+        console.log("[Storage] React Native file object prepared for upload:", {
+          uri: file.uri,
+          name: fileName,
+          type: fileType,
+          size: fileSize,
+          note: "Will use React Native Firebase Storage putFile to upload directly from URI",
+        });
+      }
+    }
+  }
+
+  const metadata = {
+    contentType: fileType,
+    ...options?.metadata,
+  };
+
+  if (__DEV__) {
+    console.log("[Storage] Uploading file:", {
+      fileName,
+      fileSize,
+      fileType,
+      storagePath,
+      platform: Platform.OS,
+      method:
+        Platform.OS === "web" ? "Firebase Web SDK" : "React Native Firebase",
+    });
+  }
+
+  try {
+    let snapshot: any;
+    let downloadURL: string | undefined;
+
+    // Use React Native Firebase Storage for React Native (upload directly from file URI)
+    // Use Firebase Web SDK for Web (upload Blob/File)
+    const rnfbStorageInstance = await getReactNativeFirebaseStorage();
+    if (
+      Platform.OS !== "web" &&
+      rnfbStorageInstance &&
+      file &&
+      "uri" in file &&
+      typeof file.uri === "string"
+    ) {
+      // React Native: Use React Native Firebase Storage with putFile
+      // This is the recommended approach - uploads directly from file URI
+      if (__DEV__) {
+        console.log(
+          "[Storage] Using React Native Firebase Storage with putFile:",
+          {
+            fileUri: file.uri,
+            storagePath,
+            contentType: metadata.contentType,
+          }
+        );
+      }
+
+      try {
+        // Create reference to storage path
+        const rnfbStorageRef = rnfbStorageInstance().ref(storagePath);
+
+        // Upload file directly from URI using putFile
+        // putFile handles all the complexity of reading and uploading the file
+        // Create metadata object without duplicate contentType
+        const { contentType, ...restMetadata } = metadata;
+        const uploadMetadata = {
+          contentType: contentType || fileType,
+          ...restMetadata,
+        };
+
+        const uploadTask = rnfbStorageRef.putFile(file.uri, uploadMetadata);
+
+        // Handle progress if callback provided
+        if (options?.onProgress) {
+          uploadTask.on("state_changed", (taskSnapshot: any) => {
+            const progress =
+              (taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100;
+            options.onProgress?.(progress);
+          });
+        }
+
+        // Wait for upload to complete
+        await uploadTask;
+
+        // Get download URL
+        const rnfbDownloadURL = await rnfbStorageRef.getDownloadURL();
+
+        if (__DEV__) {
+          console.log(
+            "[Storage] ✅ File uploaded successfully using React Native Firebase:",
+            {
+              storagePath,
+              downloadURL: rnfbDownloadURL,
+              fileSize,
+            }
+          );
+        }
+
+        // Return result - rnfbDownloadURL is guaranteed to be string
+        return {
+          storagePath,
+          downloadURL: rnfbDownloadURL,
+          metadata: {
+            size: fileSize,
+            contentType: fileType,
+            fullPath: storagePath,
+          },
+        };
+      } catch (rnfbError) {
+        const errorMessage =
+          rnfbError instanceof Error ? rnfbError.message : "Unknown error";
+        if (__DEV__) {
+          console.error(
+            "[Storage] React Native Firebase Storage upload failed:",
+            rnfbError
+          );
+        }
+        throw new Error(
+          `Failed to upload file using React Native Firebase: ${errorMessage}`
+        );
+      }
+    } else if (Platform.OS === "web") {
+      // Web: use Firebase Web SDK with Blob/File
+      if (!fileData || typeof fileData !== "object") {
+        throw new Error("Web platform requires Blob or File object for upload");
+      }
+
+      // Type guard for Blob/File
+      const isBlobOrFile = (obj: any): obj is Blob | File => {
+        return obj instanceof Blob || obj instanceof File;
+      };
+
+      if (!isBlobOrFile(fileData)) {
+        throw new Error("Web platform requires Blob or File object for upload");
+      }
+
+      const binaryData: Blob | File = fileData;
+
+      if (__DEV__) {
+        const dataType = binaryData instanceof File ? "File" : "Blob";
+        const size = binaryData.size;
+        console.log("[Storage] Using Firebase Web SDK uploadBytes:", {
+          dataType,
+          platform: Platform.OS,
+          size,
+        });
+      }
+
+      const uploadTask = uploadBytes(storageRef, binaryData, metadata);
+
+      // Handle progress if callback provided
+      if (options?.onProgress) {
+        // Note: uploadBytes doesn't support progress tracking directly
+        // For progress tracking, we would need to use uploadBytesResumable
+        // For now, we'll just call the callback with 100% after upload
+        uploadTask.then(() => {
+          options.onProgress?.(100);
+        });
+      }
+
+      snapshot = await uploadTask;
+    } else {
+      // Fallback: React Native without React Native Firebase
+      // This should not happen if @react-native-firebase/storage is installed
+      throw new Error(
+        "React Native Firebase Storage is not available. Please install @react-native-firebase/storage and rebuild the app."
+      );
+    }
+
+    // Get download URL for Web platform
+    // React Native Firebase already returned and exited above, so this is only for Web
+    if (Platform.OS === "web" && snapshot) {
+      if (__DEV__) {
+        console.log(
+          "[Storage] File uploaded successfully:",
+          snapshot.ref?.fullPath || storagePath
+        );
+      }
+
+      try {
+        // Ensure we have a valid StorageReference
+        // For Web SDK uploads, snapshot.ref should be valid
+        let fileRef: StorageReference = snapshot.ref;
+
+        // If ref is not valid or missing, recreate it from the storage path
+        if (!fileRef || !fileRef.fullPath) {
+          const storage = getStorage();
+          fileRef = ref(storage, storagePath);
+        }
+
+        // Use SDK's getDownloadURL - this is the most reliable method
+        // It handles token generation, URL encoding, and ensures the URL returns file content
+        // IMPORTANT: getDownloadURL generates a URL that returns the actual file content,
+        // not JSON metadata. This is the correct way to get download URLs.
+        downloadURL = await getDownloadURL(fileRef);
+
+        if (__DEV__) {
+          console.log("[Storage] ✅ Got download URL from SDK:", {
+            downloadURL,
+            path: fileRef.fullPath,
+            note: "SDK-generated URLs are guaranteed to return file content, not JSON metadata",
+          });
+
+          // Verify URL format
+          if (downloadURL && !downloadURL.includes("alt=media")) {
+            console.warn(
+              "[Storage] ⚠️ Download URL doesn't contain 'alt=media' - this may cause issues"
+            );
+          }
+        }
+      } catch (sdkError) {
+        // SDK failed - this should not happen in normal cases
+        // But if it does, we'll log the error and throw a helpful message
+        const errorMessage =
+          sdkError instanceof Error ? sdkError.message : "Unknown error";
+
+        console.error("[Storage] ❌ Failed to get download URL from SDK:", {
+          error: errorMessage,
+          path: snapshot?.ref?.fullPath || storagePath,
+          note: "This usually means the file upload failed or storage permissions are incorrect",
+        });
+
+        throw new Error(
+          `Failed to get download URL: ${errorMessage}. ` +
+            `The file may not have been uploaded correctly, or there may be a permissions issue. ` +
+            `Please check Firebase Storage rules and ensure the upload completed successfully.`
+        );
+      }
+
+      if (!downloadURL) {
+        throw new Error(
+          "Failed to get download URL. The file may not have been uploaded correctly."
+        );
+      }
+
+      if (__DEV__) {
+        console.log("[Storage] Download URL obtained:", downloadURL);
+      }
+
+      return {
+        storagePath,
+        downloadURL: downloadURL as string, // Type assertion: downloadURL is string here
+        metadata: {
+          size: fileSize,
+          contentType: fileType,
+          fullPath: snapshot?.ref?.fullPath || storagePath,
+        },
+      };
+    } else {
+      // This should not happen - React Native should have returned above
+      throw new Error(
+        "Upload completed but download URL was not obtained. This is an unexpected state."
+      );
+    }
+  } catch (error) {
+    console.error("[Storage] Upload failed:", error);
+    console.error("[Storage] Error details:", {
+      code: (error as any)?.code,
+      message: error instanceof Error ? error.message : "Unknown error",
+      serverResponse: (error as any)?.serverResponse,
+      storagePath,
+      fileName,
+      fileSize,
+      fileType,
+    });
+
+    // Provide more helpful error messages
+    if (error instanceof Error) {
+      // Check for specific Firebase Storage errors
+      if (error.message.includes("storage/unknown")) {
+        throw new Error(
+          `Firebase Storage error: An unknown error occurred. ` +
+            `Please check: 1) Firebase Storage is enabled in your Firebase Console, ` +
+            `2) Storage security rules allow uploads, ` +
+            `3) User is authenticated. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/unauthorized")) {
+        throw new Error(
+          `Firebase Storage error: User is not authorized to upload files. ` +
+            `Please check Storage security rules. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/quota-exceeded")) {
+        throw new Error(
+          `Firebase Storage error: Storage quota exceeded. ` +
+            `Please check your Firebase Storage quota. ` +
+            `Original error: ${error.message}`
+        );
+      }
+      if (error.message.includes("storage/unauthenticated")) {
+        throw new Error(
+          `Firebase Storage error: User is not authenticated. ` +
+            `Please log in and try again. ` +
+            `Original error: ${error.message}`
+        );
+      }
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Get download URL for file
+ */
+export async function getFileUrl(storagePath: string): Promise<string> {
+  const storage = getStorageInstance();
+  const storageRef = ref(storage, storagePath);
+  return await getDownloadURL(storageRef);
+}
+
+/**
+ * Delete file from Firebase Storage
+ */
+export async function deleteFileFromStorage(storagePath: string): Promise<void> {
+  const storage = getStorageInstance();
+  const storageRef = ref(storage, storagePath);
+  await deleteObject(storageRef);
+}
+
+/**
+ * Validate file size
+ */
+export function validateFileSize(fileSize: number, maxSize: number): {
+  valid: boolean;
+  error?: string;
+} {
+  if (fileSize > maxSize) {
+    return {
+      valid: false,
+      error: `File size exceeds maximum allowed size of ${formatFileSize(maxSize)}`,
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validate file type
+ */
+export function validateFileType(
+  mimeType: string,
+  allowedTypes: string[]
+): {
+  valid: boolean;
+  error?: string;
+} {
+  if (allowedTypes.length === 0) {
+    // No restrictions
+    return { valid: true };
+  }
+
+  if (!allowedTypes.includes(mimeType)) {
+    return {
+      valid: false,
+      error: `File type ${mimeType} is not allowed. Allowed types: ${allowedTypes.join(', ')}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Format file size to human-readable string
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+

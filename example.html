@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Liquid Glass Tab Bar</title>
+    <!-- Sử dụng font Inter cho giao diện hiện đại -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset và Cài đặt cơ bản */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent; /* Loại bỏ highlight khi tap trên mobile */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f2f4f8; /* Màu nền sáng nhẹ kiểu mobile */
+            min-height: 100vh;
+            padding-bottom: 100px; /* Khoảng trống để không bị tab bar che nội dung cuối */
+            overflow-x: hidden;
+        }
+
+        /* Giả lập khung màn hình mobile nếu xem trên desktop */
+        .mobile-wrapper {
+            max-width: 430px; /* Kích thước khoảng iPhone Pro Max */
+            margin: 0 auto;
+            background: #f2f4f8;
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.05); /* Đổ bóng nhẹ cho khung */
+        }
+
+        /* Header giả lập */
+        .mobile-header {
+            padding: 60px 20px 20px 20px; /* Padding top lớn để tránh "tai thỏ" giả định */
+            background: transparent;
+        }
+        .mobile-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        /* Nội dung giả lập (Cards) */
+        .content-feed {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .card-img-placeholder {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #e0eAFC, #cfdef3);
+            border-radius: 16px;
+            margin-bottom: 15px;
+        }
+        .card h3 { margin-bottom: 8px; color: #333; }
+        .card p { color: #666; font-size: 14px; line-height: 1.5; }
+
+        /* --- TAB BAR MOBILE --- */
+        .tab-bar-container {
+            position: fixed;
+            bottom: 24px; /* Cách đáy 24px tạo cảm giác floating */
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: none; /* Để container không chặn click bên ngoài tab bar */
+        }
+
+        .tab-bar {
+            pointer-events: auto; /* Bật lại click cho tab bar */
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px; /* Padding nhỏ hơn chút cho gọn */
+            
+            width: calc(100% - 48px); /* Cách lề trái phải mỗi bên 24px */
+            max-width: 380px; /* Không quá rộng trên desktop */
+            height: 64px; /* Chiều cao cố định chuẩn mobile */
+
+            /* Hiệu ứng Glassmorphism Nền */
+            background: rgba(255, 255, 255, 0.65); /* Nền sáng hơn chút */
+            backdrop-filter: blur(20px) saturate(180%); /* Tăng độ bão hòa để sống động hơn */
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            
+            border-radius: 32px; /* Bo tròn hoàn hảo cho chiều cao 64px */
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .tab-item {
+            text-decoration: none;
+            color: #999; /* Màu icon khi chưa active nhạt hơn */
+            flex: 1; /* Chia đều không gian */
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            transition: color 0.3s ease;
+        }
+
+        .tab-item svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor; /* Sử dụng màu hiện tại của text */
+            stroke-width: 2;
+            fill: none;
+            transition: all 0.3s ease;
+        }
+
+        .tab-item.active {
+            color: #222; /* Màu đậm khi active */
+        }
+
+        /* Chỉ báo (Indicator) Gương Nổi */
+        .indicator {
+            position: absolute;
+            z-index: 1;
+            top: 8px; /* Khớp với padding của tab-bar */
+            left: 8px;
+            height: 48px; /* (64px height - 8px*2 padding) */
+            width: 48px; /* Sẽ được JS ghi đè, nhưng đặt mặc định */
+
+            /* Hiệu ứng Gương (Liquid Glass) với Quang phổ nhẹ */
+            /* Kết hợp nền trắng trong suốt + gradient quang phổ rất mờ */
+            background: 
+                linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0)),
+                linear-gradient(
+                    125deg, 
+                    rgba(255, 0, 0, 0.05) 0%,   /* Đỏ rất nhạt */
+                    rgba(255, 255, 0, 0.05) 25%, /* Vàng rất nhạt */
+                    rgba(0, 255, 0, 0.05) 50%,   /* Xanh lá rất nhạt */
+                    rgba(0, 255, 255, 0.05) 75%, /* Cyan rất nhạt */
+                    rgba(0, 0, 255, 0.05) 100%   /* Xanh dương rất nhạt */
+                );
+            
+            backdrop-filter: blur(8px) brightness(1.1); /* Tăng nhẹ độ sáng nền bên dưới */
+            -webkit-backdrop-filter: blur(8px) brightness(1.1);
+            border-radius: 24px; /* Bo tròn theo chiều cao mới */
+
+            /* Viền và bóng đổ tạo hiệu ứng nổi 3D sắc nét hơn, thêm chút màu sắc vào highlight */
+            box-shadow: 
+                inset 1px 1px 2px rgba(255, 255, 255, 0.9), /* Highlight trắng mạnh ở góc trên trái */
+                inset -1px -1px 2px rgba(0, 0, 0, 0.1),     /* Bóng tối bên trong góc dưới phải */
+                inset 0 0 10px rgba(200, 200, 255, 0.2),   /* Ánh xanh nhẹ bên trong để tăng cảm giác kính */
+                0 5px 15px rgba(0, 0, 0, 0.15);             /* Bóng đổ xuống nền */
+            
+            /* Viền bán trong suốt, hơi sáng */
+            border: 1px solid rgba(255, 255, 255, 0.4);
+
+            transition: all 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6); /* Nảy mạnh hơn chút */
+        }
+        
+        /* Thêm một lớp giả để tạo hiệu ứng phản chiếu bề mặt bóng (specular reflection) */
+        .indicator::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            right: 10px;
+            height: 40%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.5), rgba(255,255,255,0));
+            border-radius: 20px 20px 40% 40% / 20px 20px 10px 10px; /* Hình dáng phản chiếu cong */
+            opacity: 0.6;
+            filter: blur(2px);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="mobile-wrapper">
+        <header class="mobile-header">
+            <h1>Khám phá</h1>
+        </header>
+
+        <main class="content-feed">
+            <!-- Nội dung giả lập -->
+            <div class="card">
+                <div class="card-img-placeholder"></div>
+                <h3>Thiết kế Glassmorphism</h3>
+                <p>Xu hướng thiết kế sử dụng hiệu ứng mờ nền đang trở lại mạnh mẽ trên các giao diện di động hiện đại.</p>
+            </div>
+            <div class="card">
+                <div class="card-img-placeholder" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);"></div>
+                <h3>Trải nghiệm người dùng</h3>
+                <p>Đặt thanh điều hướng ở dưới cùng giúp người dùng dễ dàng thao tác bằng một tay trên các thiết bị màn hình lớn.</p>
+            </div>
+            <div class="card">
+                 <div class="card-img-placeholder" style="background: linear-gradient(135deg, #a1c4fd, #c2e9fb);"></div>
+                <h3>Hiệu ứng chuyển động</h3>
+                <p>Sử dụng các chuyển động vật lý (như hiệu ứng nảy "liquid") làm cho giao diện trở nên sống động và thú vị hơn.</p>
+            </div>
+             <div class="card">
+                <div class="card-img-placeholder"></div>
+                <h3>Nội dung thêm</h3>
+                <p>Cuộn xuống để thấy hiệu ứng làm mờ của thanh tab bar khi nội dung trôi qua bên dưới nó.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Tab Bar Container -->
+    <div class="tab-bar-container">
+        <nav class="tab-bar">
+            <div class="indicator"></div>
+
+            <a href="#home" class="tab-item active">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </a>
+            <a href="#search" class="tab-item">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </a>
+            <a href="#add" class="tab-item">
+                 <!-- Icon Plus nổi bật hơn chút -->
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="stroke-width: 2.5px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </a>
+            <a href="#likes" class="tab-item">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </a>
+            <a href="#profile" class="tab-item">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </a>
+        </nav>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabItems = document.querySelectorAll('.tab-item');
+            const indicator = document.querySelector('.indicator');
+
+            function moveIndicator(activeItem) {
+                // Lấy vị trí tương đối của item so với tab-bar
+                indicator.style.left = `${activeItem.offsetLeft}px`;
+                indicator.style.width = `${activeItem.offsetWidth}px`;
+
+                tabItems.forEach(item => item.classList.remove('active'));
+                activeItem.classList.add('active');
+            }
+
+            tabItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    moveIndicator(e.currentTarget);
+                });
+            });
+
+            // Khởi tạo vị trí ban đầu
+            // Sử dụng requestAnimationFrame để đảm bảo layout đã ổn định
+            requestAnimationFrame(() => {
+                const active = document.querySelector('.tab-item.active');
+                if (active) moveIndicator(active);
+            });
+
+            // Cập nhật lại khi resize màn hình (quan trọng cho mobile khi xoay ngang/dọc)
+            window.addEventListener('resize', () => {
+                const active = document.querySelector('.tab-item.active');
+                if (active) moveIndicator(active);
+            });
+        });
+    </script>
+</body>
+</html>
